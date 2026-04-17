@@ -35,7 +35,8 @@ urlpatterns = [
     ),
     path(
         "register/",
-        views.register,
+        # views.register,
+        views.RegisterView.as_view(),
         name="register",
     ),
 
