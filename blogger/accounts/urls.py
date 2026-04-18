@@ -91,4 +91,11 @@ urlpatterns = [
         ),
         name="password_reset_complete",
     ),
+    path(
+        "profile/",
+        views.profile,
+        name="profile"),
+    path("settings/",
+         views.settings_view,
+         name="settings"),
 ]
