@@ -74,8 +74,6 @@ class RegisterView(View):
 #  Login View
 # ─────────────────────────────────────────────
 class LoginView(View):
-    """Handles GET (show form) and POST (authenticate user)."""
-
     template_name = "accounts/login.html"
 
     def get(self, request):
@@ -86,33 +84,23 @@ class LoginView(View):
 
     def post(self, request):
         form = AuthenticationForm(request, data=request.POST)
-
         if form.is_valid():
             username = form.cleaned_data.get("username")
             password = form.cleaned_data.get("password")
             user = authenticate(request, username=username, password=password)
-
             if user is not None:
                 login(request, user)
-
-                # Handle "Remember me"
                 if not request.POST.get("remember_me"):
-                    # Session expires when the browser closes
                     request.session.set_expiry(0)
                 else:
-                    # Session lasts 30 days
                     request.session.set_expiry(60 * 60 * 24 * 30)
-
                 messages.success(request, f"Welcome back, {user.get_full_name() or username}!")
-
-                # Honour the ?next= redirect (e.g. from @login_required)
                 next_url = request.POST.get("next") or request.GET.get("next")
                 return redirect(next_url if next_url else "accounts:dashboard")
             else:
                 messages.error(request, "Invalid username or password.")
         else:
             messages.error(request, "Please correct the errors below.")
-
         return render(request, self.template_name, {"form": form})
 
 
@@ -125,7 +113,6 @@ class LogoutView(View):
         messages.info(request, "You have been logged out successfully.")
         return redirect("accounts:login")
 
-    # Support POST logout too (more secure — use a form with CSRF token)
     def post(self, request):
         logout(request)
         messages.info(request, "You have been logged out successfully.")

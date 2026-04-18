@@ -1,0 +1,4 @@
+.idea
+blogger/db.sqlite3
+**/migrations/__init__.py
+**/**.cpython-312.pyc
