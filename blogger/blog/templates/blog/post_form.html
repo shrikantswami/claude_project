@@ -337,7 +337,7 @@
         id="id_title"
         class="title-input {% if form_errors.title %}is-invalid{% endif %}"
         placeholder="Post title…"
-        value="{{ post.title|default:form_data.title|default:'' }}"
+        value="{{ post.title|default:'' }}"
         maxlength="255"
         required
         autofocus
@@ -360,7 +360,7 @@
         placeholder="A short summary of your post…"
         maxlength="500"
         rows="3"
-      >{{ post.excerpt|default:form_data.excerpt|default:'' }}</textarea>
+      >{{ post.excerpt|default:'' }}</textarea>
       <div class="word-count">
         <span id="excerpt-count">{{ post.excerpt|length|default:0 }}</span> / 500 characters
       </div>
@@ -421,7 +421,7 @@
           class="content-textarea {% if form_errors.content %}is-invalid{% endif %}"
           placeholder="Start writing your post in Markdown…&#10;&#10;## Your first heading&#10;&#10;Your content here…"
           required
-        >{{ post.content|default:form_data.content|default:'' }}</textarea>
+        >{{ post.content|default:'' }}</textarea>
 
         <!-- Live preview pane -->
         <div class="preview-pane" id="preview-pane">

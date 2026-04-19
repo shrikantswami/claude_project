@@ -96,22 +96,31 @@ class PostListView(View):
 
 class PostDetailView(View):
     """
-    Public post detail page.
-    Increments view_count on every visit.
+    Public view — only serves published posts.
+    Returns 404 for drafts and scheduled posts.
+    This is intentional and correct behaviour.
     URL name: blog:post_detail  (slug)
     """
     template_name = "blog/post_detail.html"
 
     def get(self, request, slug):
-        post = get_object_or_404(Post, slug=slug, status="published")
+        # Authors and staff can preview drafts, public only sees published
+        if request.user.is_authenticated:
+            post = get_object_or_404(Post, slug=slug)
+            # Block non-authors from viewing others' drafts
+            if post.status != "published" and post.author != request.user and not request.user.is_staff:
+                from django.core.exceptions import PermissionDenied
+                raise PermissionDenied
+        else:
+            post = get_object_or_404(Post, slug=slug, status="published")
+
         post.view_count += 1
         post.save(update_fields=["view_count"])
 
-        comments = post.comments.filter(is_approved=True).order_by("created_at")
-        related  = Post.objects.filter(
+        comments  = post.comments.filter(is_approved=True).order_by("created_at")
+        related   = Post.objects.filter(
             status="published", tags__in=post.tags.all()
         ).exclude(pk=post.pk).distinct()[:3]
-
         user_liked = (
             request.user.is_authenticated and
             Like.objects.filter(post=post, user=request.user).exists()
@@ -147,6 +156,34 @@ class PostDetailView(View):
         messages.success(request, "Your comment has been submitted and is awaiting approval.")
         return redirect("blog:post_detail", slug=slug)
 
+class PostPreviewView(LoginRequiredMixin, View):
+    """
+    Private preview — only the author or staff can access.
+    Works for draft, scheduled, and published posts.
+    Shows a preview banner so the author knows it is not live.
+    """
+    template_name = "blog/post_detail.html"
+    login_url     = "accounts:login"
+
+    def get(self, request, pk):
+        post = get_object_or_404(Post, pk=pk)
+
+        # Only the author or staff can preview
+        if post.author != request.user and not request.user.is_staff:
+            messages.error(request, "You do not have permission to preview this post.")
+            return redirect("blog:post_list")
+
+        comments = post.comments.filter(
+            is_approved=True
+        ).select_related("author").order_by("created_at")
+
+        return render(request, self.template_name, {
+            "post":        post,
+            "comments":    comments,
+            "related":     [],
+            "user_liked":  False,
+            "is_preview":  True,   # ← flag for the template banner
+        })
 
 class PostCreateView(LoginRequiredMixin, View):
     """
@@ -203,7 +240,12 @@ class PostCreateView(LoginRequiredMixin, View):
             request,
             f'Post "{post.title}" has been {"published" if status == "published" else "saved as draft"}.',
         )
-        return redirect("blog:post_detail", slug=post.slug)
+        # ── Production-standard redirect logic ──────────────
+        if status == "published":
+            return redirect("blog:post_detail", slug=post.slug)
+        else:
+            # Drafts and scheduled posts go to preview
+            return redirect("blog:post_preview", pk=post.pk)
 
 
 class PostEditView(LoginRequiredMixin, View):
@@ -271,7 +313,10 @@ class PostEditView(LoginRequiredMixin, View):
             post.tags.clear()
 
         messages.success(request, f'Post "{post.title}" has been updated.')
-        return redirect("blog:post_detail", slug=post.slug)
+        if status == "published":
+            return redirect("blog:post_detail", slug=post.slug)
+        else:
+            return redirect("blog:post_preview", pk=post.pk)
 
 
 class PostDeleteView(LoginRequiredMixin, View):
@@ -296,34 +341,6 @@ class PostDeleteView(LoginRequiredMixin, View):
 # ═══════════════════════════════════════════════════════════
 #  DRAFT VIEWS
 # ═══════════════════════════════════════════════════════════
-
-@login_required(login_url="accounts:login")
-def draft_list(request):
-    """
-    List all draft posts belonging to the current user.
-    URL name: blog:draft_list
-    """
-    drafts = Post.objects.filter(
-        author=request.user, status="draft"
-    ).order_by("-updated_at")
-
-    page = paginate(drafts, request, per_page=10)
-    return render(request, "blog/draft_list.html", {"drafts": page})
-
-
-@login_required(login_url="accounts:login")
-def publish_post(request, pk):
-    """
-    Publish a draft post immediately.
-    URL name: blog:publish_post  (pk)
-    """
-    post = get_object_or_404(Post, pk=pk, author=request.user)
-    if post.status != "published":
-        post.status       = "published"
-        post.published_at = timezone.now()
-        post.save(update_fields=["status", "published_at"])
-        messages.success(request, f'"{post.title}" is now published.')
-    return redirect("blog:post_detail", slug=post.slug)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -546,3 +563,140 @@ def tag_detail(request, slug):
         "tag":   tag,
         "posts": page,
     })
+
+
+
+# ─────────────────────────────────────────────
+#  Helper
+# ─────────────────────────────────────────────
+def _paginate(queryset, request, per_page=15):
+    paginator = Paginator(queryset, per_page)
+    page_num  = request.GET.get("page", 1)
+    try:
+        return paginator.page(page_num)
+    except PageNotAnInteger:
+        return paginator.page(1)
+    except EmptyPage:
+        return paginator.page(paginator.num_pages)
+
+
+# ─────────────────────────────────────────────
+#  Draft list view
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def draft_list(request):
+    """
+    Paginated list of the current user's unpublished posts
+    (status = 'draft' or 'scheduled').
+
+    Supports:
+      ?q=        full-text search on title + content
+      ?status=   filter by 'draft' or 'scheduled'
+      ?sort=     updated | oldest | title | words
+      ?page=     pagination
+    """
+    base_qs = Post.objects.filter(
+        author=request.user
+    ).exclude(
+        status="published"
+    ).select_related("author").prefetch_related("tags")
+
+    # ── Search ──────────────────────────────
+    query = request.GET.get("q", "").strip()
+    if query:
+        base_qs = base_qs.filter(
+            Q(title__icontains=query) |
+            Q(content__icontains=query) |
+            Q(excerpt__icontains=query)
+        )
+
+    # ── Status filter ────────────────────────
+    status_filter = request.GET.get("status", "").strip()
+    if status_filter in ("draft", "scheduled"):
+        base_qs = base_qs.filter(status=status_filter)
+
+    # ── Sorting ──────────────────────────────
+    sort = request.GET.get("sort", "updated")
+    sort_map = {
+        "updated": "-updated_at",
+        "oldest":  "created_at",
+        "title":   "title",
+        "words":   "-read_time",
+    }
+    base_qs = base_qs.order_by(sort_map.get(sort, "-updated_at"))
+
+    # ── Counts for stat cards ────────────────
+    all_unpublished = Post.objects.filter(
+        author=request.user
+    ).exclude(status="published")
+
+    draft_count     = all_unpublished.filter(status="draft").count()
+    scheduled_count = all_unpublished.filter(status="scheduled").count()
+    total_unpublished = draft_count + scheduled_count
+
+    # ── Paginate ─────────────────────────────
+    drafts = _paginate(base_qs, request, per_page=15)
+
+    return render(request, "blog/draft_list.html", {
+        "drafts":           drafts,
+        "query":            query,
+        "status_filter":    status_filter,
+        "sort":             sort,
+        "draft_count":      draft_count,
+        "scheduled_count":  scheduled_count,
+        "total_unpublished": total_unpublished,
+    })
+
+
+# ─────────────────────────────────────────────
+#  Publish post  (updated — redirects to preview for drafts)
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def publish_post(request, pk):
+    """
+    Immediately publish a draft or scheduled post.
+    Only accepts POST to prevent accidental GET-based publishing.
+    Redirects to the live post_detail after publishing.
+    """
+    if request.method != "POST":
+        return redirect("blog:draft_list")
+
+    post = get_object_or_404(Post, pk=pk, author=request.user)
+
+    if post.status == "published":
+        messages.info(request, f'"{post.title}" is already published.')
+        return redirect("blog:post_detail", slug=post.slug)
+
+    post.status       = "published"
+    post.published_at = timezone.now()
+    post.save(update_fields=["status", "published_at"])
+
+    messages.success(request, f'"{post.title}" is now live.')
+    return redirect("blog:post_detail", slug=post.slug)
+
+
+# ─────────────────────────────────────────────
+#  Unschedule post
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def unschedule_post(request, pk):
+    """
+    Revert a scheduled post back to draft status.
+    Clears the published_at timestamp.
+    Only accepts POST.
+    """
+    if request.method != "POST":
+        return redirect("blog:draft_list")
+
+    post = get_object_or_404(Post, pk=pk, author=request.user)
+
+    if post.status != "scheduled":
+        messages.info(request, f'"{post.title}" is not scheduled.')
+        return redirect("blog:draft_list")
+
+    post.status       = "draft"
+    post.published_at = None
+    post.save(update_fields=["status", "published_at"])
+
+    messages.success(request, f'"{post.title}" has been moved back to drafts.')
+    return redirect("blog:draft_list")

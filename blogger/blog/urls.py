@@ -33,6 +33,8 @@ urlpatterns = [
         views.PostDetailView.as_view(),
         name="post_detail",
     ),
+    path("post/<int:pk>/preview/", views.PostPreviewView.as_view(), name="post_preview"),
+    path("post/<int:pk>/unschedule/", views.unschedule_post, name="unschedule_post"),
 
     # ── Post CRUD (login required) ───────────────────────────
 

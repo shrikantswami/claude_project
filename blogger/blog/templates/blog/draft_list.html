@@ -1,10 +1,525 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drafts – Blogger</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      color: #111;
+    }
+
+    /* ══════════════════════════
+       Layout
+    ══════════════════════════ */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ══════════════════════════
+       Sidebar
+    ══════════════════════════ */
+    .sidebar {
+      width: 220px; background: #1a1a2e;
+      display: flex; flex-direction: column;
+      flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    }
+    .sb-logo    { display: flex; align-items: center; gap: 10px; padding: 20px 18px 16px; }
+    .sb-icon    { width: 32px; height: 32px; background: #7F77DD; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .sb-icon svg{ width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; }
+    .sb-brand   { font-size: 16px; font-weight: 600; color: #fff; }
+    .sb-divider { height: 1px; background: rgba(255,255,255,.08); margin: 0 18px; }
+    .sb-section { padding: 12px 18px 4px; font-size: 10px; letter-spacing: .08em; color: rgba(255,255,255,.3); text-transform: uppercase; font-weight: 600; }
+    .sb-link    { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; margin: 1px 6px; font-size: 13px; color: rgba(255,255,255,.6); text-decoration: none; transition: background .15s; }
+    .sb-link svg{ width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+    .sb-link:hover   { background: rgba(255,255,255,.07); color: rgba(255,255,255,.85); }
+    .sb-link.active  { background: rgba(127,119,221,.25); color: #AFA9EC; }
+    .sb-link.active svg { stroke: #AFA9EC; }
+    .sb-spacer  { flex: 1; }
+    .sb-user    { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,.07); }
+    .sb-avatar  { width: 30px; height: 30px; border-radius: 50%; background: #7F77DD; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }
+    .sb-uname   { font-size: 13px; color: rgba(255,255,255,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sb-urole   { font-size: 11px; color: rgba(255,255,255,.35); }
+
+    /* ══════════════════════════
+       Main
+    ══════════════════════════ */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+    .topbar {
+      background: #fff; border-bottom: 1px solid #e8e8e8;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 56px; flex-shrink: 0;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar-title { font-size: 16px; font-weight: 600; color: #111; }
+    .topbar-sub   { font-size: 12px; color: #888; }
+
+    .btn-new {
+      display: flex; align-items: center; gap: 7px;
+      background: #7F77DD; border: none; border-radius: 8px;
+      color: #fff; font-size: 13px; font-weight: 500;
+      padding: 8px 14px; cursor: pointer; font-family: inherit;
+      text-decoration: none; transition: background .15s;
+    }
+    .btn-new svg  { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2.5; }
+    .btn-new:hover{ background: #534AB7; }
+
+    .content { padding: 24px; flex: 1; }
+
+    /* Alert */
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+    .alert-error   { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .alert-info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+
+    /* ══════════════════════════
+       Stats row
+    ══════════════════════════ */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-box  { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px 16px; }
+    .stat-n    { font-size: 22px; font-weight: 700; color: #111; }
+    .stat-l    { font-size: 11px; color: #aaa; margin-top: 2px; }
+    .stat-box.amber  .stat-n { color: #BA7517; }
+    .stat-box.purple .stat-n { color: #534AB7; }
+    .stat-box.gray   .stat-n { color: #5F5E5A; }
+
+    /* ══════════════════════════
+       Toolbar
+    ══════════════════════════ */
+    .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+
+    .search-wrap  { position: relative; flex: 1; min-width: 180px; }
+    .search-icon  { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; fill: none; stroke: #bbb; stroke-width: 2; pointer-events: none; }
+    .search-input {
+      width: 100%; height: 36px; padding: 0 10px 0 32px;
+      border: 1px solid #e2e2e2; border-radius: 8px;
+      background: #fff; color: #111; font-size: 13px; font-family: inherit; outline: none;
+      transition: border-color .15s;
+    }
+    .search-input:focus { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,.1); }
+
+    .sort-select {
+      height: 36px; padding: 0 10px;
+      border: 1px solid #e2e2e2; border-radius: 8px;
+      background: #fff; color: #111; font-size: 13px;
+      font-family: inherit; outline: none;
+    }
+    .sort-select:focus { border-color: #7F77DD; }
+
+    .filter-tabs { display: flex; gap: 4px; }
+    .ftab {
+      font-size: 12px; padding: 5px 13px; border-radius: 20px;
+      border: 1px solid #e2e2e2; background: #fff; color: #666;
+      cursor: pointer; font-family: inherit; text-decoration: none;
+      white-space: nowrap; transition: all .15s;
+    }
+    .ftab:hover  { background: #f5f5f5; }
+    .ftab.active { background: #7F77DD; border-color: #7F77DD; color: #fff; }
+
+    /* ══════════════════════════
+       Draft table
+    ══════════════════════════ */
+    .draft-table { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+
+    .table-head {
+      display: grid;
+      grid-template-columns: 1fr 100px 110px 80px 180px;
+      padding: 10px 18px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 11px; font-weight: 600; color: #aaa;
+      text-transform: uppercase; letter-spacing: .05em;
+    }
+
+    .draft-row {
+      display: grid;
+      grid-template-columns: 1fr 100px 110px 80px 180px;
+      padding: 13px 18px;
+      border-bottom: 1px solid #f8f8f8;
+      align-items: center;
+      transition: background .15s;
+    }
+    .draft-row:last-child { border-bottom: none; }
+    .draft-row:hover      { background: #fafafa; }
+
+    .draft-title   { font-size: 13px; font-weight: 600; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px; }
+    .draft-excerpt { font-size: 11px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+
+    .status-pill  { font-size: 10px; padding: 3px 9px; border-radius: 20px; font-weight: 500; display: inline-block; }
+    .pill-draft   { background: #F1EFE8; color: #5F5E5A; }
+    .pill-sched   { background: #EEEDFE; color: #534AB7; }
+
+    .date-cell    { font-size: 12px; color: #888; }
+    .words-cell   { font-size: 12px; color: #888; }
+
+    .action-cell  { display: flex; gap: 5px; flex-wrap: wrap; }
+    .act-btn {
+      font-size: 11px; padding: 4px 10px; border-radius: 6px;
+      border: 1px solid #e2e2e2; background: #fafafa; color: #555;
+      cursor: pointer; font-family: inherit; text-decoration: none;
+      white-space: nowrap; transition: background .15s;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .act-btn svg        { width: 11px; height: 11px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .act-btn:hover      { background: #f0f0f0; }
+    .act-btn.publish    { color: #0F6E56; border-color: #9FE1CB; background: #f0fdf4; }
+    .act-btn.publish:hover { background: #dcfce7; }
+    .act-btn.preview    { color: #185FA5; border-color: #B5D4F4; background: #eff6ff; }
+    .act-btn.preview:hover { background: #dbeafe; }
+    .act-btn.danger     { color: #dc2626; border-color: #fca5a5; }
+    .act-btn.danger:hover { background: #fef2f2; }
+    .act-btn.unschedule { color: #854F0B; border-color: #FAC775; background: #FAEEDA; }
+    .act-btn.unschedule:hover { background: #fef3c7; }
+
+    /* ══════════════════════════
+       Pagination
+    ══════════════════════════ */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .page-btn   { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e2e2; background: #fff; font-size: 13px; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; text-decoration: none; transition: all .15s; }
+    .page-btn svg   { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .page-btn:hover { background: #f5f5f5; }
+    .page-btn.active  { background: #7F77DD; border-color: #7F77DD; color: #fff; }
+    .page-btn.disabled{ opacity: .4; pointer-events: none; }
+
+    /* ══════════════════════════
+       Empty state
+    ══════════════════════════ */
+    .empty-state { text-align: center; padding: 56px 24px; }
+    .empty-icon  { width: 48px; height: 48px; fill: none; stroke: #ddd; stroke-width: 1.5; margin: 0 auto 14px; display: block; }
+    .empty-title { font-size: 15px; font-weight: 600; color: #666; margin-bottom: 5px; }
+    .empty-sub   { font-size: 13px; color: #aaa; margin-bottom: 18px; }
+
+    /* Mobile hamburger */
+    .ham-btn { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+    .ham-btn svg { width: 20px; height: 20px; stroke: #555; fill: none; stroke-width: 2; }
+
+    /* ══════════════════════════
+       Responsive
+    ══════════════════════════ */
+    @media (max-width: 900px) {
+      .table-head  { grid-template-columns: 1fr 90px 90px 60px 160px; }
+      .draft-row   { grid-template-columns: 1fr 90px 90px 60px 160px; }
+    }
+    @media (max-width: 680px) {
+      .sidebar     { display: none; }
+      .ham-btn     { display: block; }
+      .content     { padding: 14px; }
+      .stats-row   { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .table-head  { display: none; }
+      .draft-row   { grid-template-columns: 1fr; gap: 8px; padding: 14px; }
+      .words-cell  { display: none; }
+      .toolbar     { flex-direction: column; align-items: stretch; }
+    }
+  </style>
 </head>
-<body> ,
+<body>
+
+<div class="layout">
+
+  <!-- ════════════════════════════════
+       Sidebar
+  ═════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <span class="sb-brand">Blogger</span>
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-section">Main</div>
+    <a href="{% url 'accounts:dashboard' %}" class="sb-link">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+    </a>
+    <a href="{% url 'blog:post_list' %}" class="sb-link">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>My posts
+    </a>
+    <a href="{% url 'blog:draft_list' %}" class="sb-link active">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Drafts
+    </a>
+    <a href="{% url 'blog:comment_list' %}" class="sb-link">
+      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Comments
+    </a>
+    <div class="sb-section">Analytics</div>
+    <a href="{% url 'blog:stats' %}" class="sb-link">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Stats
+    </a>
+    <a href="{% url 'blog:audience' %}" class="sb-link">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Audience
+    </a>
+    <div class="sb-section">Account</div>
+    <a href="{% url 'accounts:profile' %}" class="sb-link">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile
+    </a>
+    <a href="{% url 'accounts:settings' %}" class="sb-link">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings
+    </a>
+    <div class="sb-spacer"></div>
+    <form method="POST" action="{% url 'accounts:logout' %}" style="margin:0 6px 8px">
+      {% csrf_token %}
+      <button type="submit" class="sb-link" style="width:100%;background:none;border:none;cursor:pointer;font-family:inherit">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out
+      </button>
+    </form>
+    <div class="sb-user">
+      <div class="sb-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+      <div>
+        <div class="sb-uname">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div class="sb-urole">{{ request.user.email }}</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ════════════════════════════════
+       Main content
+  ═════════════════════════════════ -->
+  <div class="main">
+
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="ham-btn" onclick="document.getElementById('sidebar').style.display='flex'" aria-label="Menu">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <div class="topbar-title">Drafts</div>
+          <div class="topbar-sub">{{ total_unpublished }} unpublished post{{ total_unpublished|pluralize }}</div>
+        </div>
+      </div>
+      <a href="{% url 'blog:post_create' %}" class="btn-new">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New post
+      </a>
+    </div>
+
+    <div class="content">
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- Stats row -->
+      <div class="stats-row">
+        <div class="stat-box amber">
+          <div class="stat-n">{{ draft_count }}</div>
+          <div class="stat-l">Drafts</div>
+        </div>
+        <div class="stat-box purple">
+          <div class="stat-n">{{ scheduled_count }}</div>
+          <div class="stat-l">Scheduled</div>
+        </div>
+        <div class="stat-box gray">
+          <div class="stat-n">{{ total_unpublished }}</div>
+          <div class="stat-l">Total unpublished</div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <form method="GET" action="{% url 'blog:draft_list' %}">
+        <div class="toolbar">
+
+          <div class="search-wrap">
+            <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              type="text" name="q" id="search-input"
+              class="search-input"
+              placeholder="Search drafts…"
+              value="{{ query|default:'' }}"
+              autocomplete="off"
+            />
+          </div>
+
+          <select name="sort" class="sort-select" onchange="this.form.submit()">
+            <option value="updated" {% if sort == 'updated' %}selected{% endif %}>Last edited</option>
+            <option value="oldest"  {% if sort == 'oldest'  %}selected{% endif %}>Oldest first</option>
+            <option value="title"   {% if sort == 'title'   %}selected{% endif %}>Title A–Z</option>
+            <option value="words"   {% if sort == 'words'   %}selected{% endif %}>Word count</option>
+          </select>
+
+          <div class="filter-tabs">
+            <a href="?{% if query %}q={{ query }}&{% endif %}sort={{ sort|default:'updated' }}"
+               class="ftab {% if not status_filter %}active{% endif %}">All</a>
+            <a href="?status=draft{% if query %}&q={{ query }}{% endif %}&sort={{ sort|default:'updated' }}"
+               class="ftab {% if status_filter == 'draft' %}active{% endif %}">Drafts</a>
+            <a href="?status=scheduled{% if query %}&q={{ query }}{% endif %}&sort={{ sort|default:'updated' }}"
+               class="ftab {% if status_filter == 'scheduled' %}active{% endif %}">Scheduled</a>
+          </div>
+
+        </div>
+      </form>
+
+      <!-- Draft table -->
+      {% if drafts %}
+        <div class="draft-table">
+          <div class="table-head">
+            <div>Title</div>
+            <div>Status</div>
+            <div>Last edited</div>
+            <div>Words</div>
+            <div>Actions</div>
+          </div>
+
+          {% for post in drafts %}
+            <div class="draft-row">
+
+              <!-- Title + excerpt -->
+              <div style="min-width:0">
+                <div class="draft-title">{{ post.title }}</div>
+                <div class="draft-excerpt">{{ post.excerpt|default:post.content|truncatewords:12 }}</div>
+              </div>
+
+              <!-- Status -->
+              <div>
+                <span class="status-pill {% if post.status == 'scheduled' %}pill-sched{% else %}pill-draft{% endif %}">
+                  {{ post.get_status_display }}
+                </span>
+              </div>
+
+              <!-- Last edited -->
+              <div class="date-cell">
+                {% if post.status == 'scheduled' %}
+                  {{ post.published_at|date:"M d, Y" }}
+                {% else %}
+                  {{ post.updated_at|date:"M d, Y" }}
+                {% endif %}
+              </div>
+
+              <!-- Word count -->
+              <div class="words-cell">
+                {{ post.content|wordcount|default:0 }}
+              </div>
+
+              <!-- Actions -->
+              <div class="action-cell">
+                <a href="{% url 'blog:post_edit' post.pk %}" class="act-btn">
+                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Edit
+                </a>
+
+                <a href="{% url 'blog:post_preview' post.pk %}" class="act-btn preview">
+                  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  Preview
+                </a>
+
+                {% if post.status == 'draft' %}
+                  <form method="POST" action="{% url 'blog:publish_post' post.pk %}" style="display:inline">
+                    {% csrf_token %}
+                    <button type="submit" class="act-btn publish">
+                      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                      Publish
+                    </button>
+                  </form>
+                {% endif %}
+
+                {% if post.status == 'scheduled' %}
+                  <form method="POST" action="{% url 'blog:unschedule_post' post.pk %}" style="display:inline">
+                    {% csrf_token %}
+                    <button type="submit" class="act-btn unschedule">
+                      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      Unschedule
+                    </button>
+                  </form>
+                {% endif %}
+
+                <form method="POST" action="{% url 'blog:post_delete' post.pk %}" style="display:inline"
+                      onsubmit="return confirm('Delete \'{{ post.title }}\'? This cannot be undone.')">
+                  {% csrf_token %}
+                  <button type="submit" class="act-btn danger">
+                    <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    Delete
+                  </button>
+                </form>
+
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if drafts.paginator.num_pages > 1 %}
+          <div class="pagination" style="margin-top:20px">
+            {% if drafts.has_previous %}
+              <a href="?page={{ drafts.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}&sort={{ sort|default:'updated' }}"
+                 class="page-btn">
+                <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+              </a>
+            {% else %}
+              <span class="page-btn disabled"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></span>
+            {% endif %}
+
+            {% for num in drafts.paginator.page_range %}
+              {% if drafts.number == num %}
+                <span class="page-btn active">{{ num }}</span>
+              {% elif num > drafts.number|add:"-3" and num < drafts.number|add:"3" %}
+                <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}&sort={{ sort|default:'updated' }}"
+                   class="page-btn">{{ num }}</a>
+              {% endif %}
+            {% endfor %}
+
+            {% if drafts.has_next %}
+              <a href="?page={{ drafts.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}&sort={{ sort|default:'updated' }}"
+                 class="page-btn">
+                <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+              </a>
+            {% else %}
+              <span class="page-btn disabled"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+            {% endif %}
+          </div>
+        {% endif %}
+
+      {% else %}
+        <!-- Empty state -->
+        <div class="draft-table">
+          <div class="empty-state">
+            <svg class="empty-icon" viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            {% if query %}
+              <div class="empty-title">No drafts match "{{ query }}"</div>
+              <div class="empty-sub">Try a different search term.</div>
+              <a href="{% url 'blog:draft_list' %}" class="btn-new" style="display:inline-flex;margin:0 auto">Clear search</a>
+            {% elif status_filter %}
+              <div class="empty-title">No {{ status_filter }} posts</div>
+              <div class="empty-sub">You have no posts with this status.</div>
+              <a href="{% url 'blog:draft_list' %}" class="btn-new" style="display:inline-flex;margin:0 auto">View all drafts</a>
+            {% else %}
+              <div class="empty-title">No drafts yet</div>
+              <div class="empty-sub">Posts you save as drafts will appear here.</div>
+              <a href="{% url 'blog:post_create' %}" class="btn-new" style="display:inline-flex;margin:0 auto">
+                <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Write a post
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+<script>
+  /* Auto-submit search with 400ms debounce */
+  (function () {
+    var input   = document.getElementById('search-input');
+    var timeout = null;
+    if (!input) return;
+    input.addEventListener('input', function () {
+      clearTimeout(timeout);
+      timeout = setTimeout(function () {
+        var params = new URLSearchParams(window.location.search);
+        if (input.value.trim()) { params.set('q', input.value.trim()); }
+        else { params.delete('q'); }
+        params.delete('page');
+        window.location.search = params.toString();
+      }, 400);
+    });
+  })();
+</script>
 
 </body>
 </html>
