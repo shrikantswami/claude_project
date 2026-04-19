@@ -62,6 +62,7 @@ class PostListView(View):
     URL name: blog:post_list
     """
     template_name = "blog/post_list.html"
+    # "blog/templates/blog/post_list.html"
 
     def get(self, request):
         posts = Post.objects.filter(status="published").order_by("-published_at")

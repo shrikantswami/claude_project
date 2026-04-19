@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ post.title }} – Blogger</title>
+  <meta name="description" content="{{ post.excerpt|default:post.content|truncatewords:25 }}" />
+  <meta property="og:title"       content="{{ post.title }}" />
+  <meta property="og:description" content="{{ post.excerpt|default:post.content|truncatewords:25 }}" />
+  {% if post.thumbnail %}
+  <meta property="og:image"       content="{{ request.scheme }}://{{ request.get_host }}{{ post.thumbnail.url }}" />
+  {% endif %}
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      color: #111;
+      font-size: 15px;
+    }
+
+    /* ══════════════════════════════════════
+       Top navigation bar
+    ══════════════════════════════════════ */
+    .topnav {
+      background: #fff;
+      border-bottom: 1px solid #e8e8e8;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px; height: 52px;
+      position: sticky; top: 0; z-index: 20;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 600; color: #111; text-decoration: none;
+    }
+    .nav-icon {
+      width: 26px; height: 26px; background: #7F77DD;
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    }
+    .nav-icon svg { width: 13px; height: 13px; fill: none; stroke: #fff; stroke-width: 2; }
+    .nav-right    { display: flex; align-items: center; gap: 8px; }
+
+    .btn-back {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; color: #7F77DD; text-decoration: none;
+      padding: 6px 10px; border-radius: 7px;
+      transition: background .15s;
+    }
+    .btn-back:hover { background: #EEEDFE; }
+    .btn-back svg   { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    .btn-sm {
+      font-size: 12px; padding: 6px 12px; border-radius: 7px;
+      border: 1px solid #e2e2e2; background: #fafafa; color: #444;
+      cursor: pointer; font-family: inherit; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 5px;
+      transition: background .15s;
+    }
+    .btn-sm:hover      { background: #f0f0f0; }
+    .btn-sm svg        { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .btn-sm.danger     { color: #dc2626; border-color: #fca5a5; }
+    .btn-sm.danger:hover { background: #fef2f2; }
+
+    /* ══════════════════════════════════════
+       Page outer grid
+    ══════════════════════════════════════ */
+    .outer {
+      display: grid;
+      grid-template-columns: 1fr 260px;
+      gap: 24px;
+      padding: 28px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* ══════════════════════════════════════
+       Article column
+    ══════════════════════════════════════ */
+
+    /* Header */
+    .article-header   { margin-bottom: 22px; }
+    .article-tags     { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .tag-pill         { font-size: 11px; padding: 3px 10px; border-radius: 20px; background: #EEEDFE; color: #534AB7; font-weight: 500; text-decoration: none; }
+    .tag-pill:hover   { background: #CECBF6; }
+
+    .article-title {
+      font-size: 28px; font-weight: 700; color: #111;
+      line-height: 1.3; margin-bottom: 16px;
+    }
+    .article-meta {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 14px;
+      padding-bottom: 18px; border-bottom: 1px solid #f0f0f0;
+    }
+    .author-wrap  { display: flex; align-items: center; gap: 8px; }
+    .author-av    {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: #7F77DD;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; overflow: hidden;
+    }
+    .author-av img { width: 100%; height: 100%; object-fit: cover; }
+    .author-name  { font-size: 13px; font-weight: 600; color: #111; }
+    .author-date  { font-size: 12px; color: #aaa; }
+
+    .meta-stats   { display: flex; align-items: center; gap: 14px; margin-left: auto; flex-wrap: wrap; }
+    .meta-stat    { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #aaa; }
+    .meta-stat svg{ width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    /* Thumbnail */
+    .article-thumb {
+      width: 100%; height: 300px; background: #EEEDFE;
+      border-radius: 12px; margin-bottom: 28px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+    }
+    .article-thumb img  { width: 100%; height: 100%; object-fit: cover; }
+    .article-thumb-icon { width: 52px; height: 52px; fill: none; stroke: #AFA9EC; stroke-width: 1.2; }
+
+    /* Article body prose */
+    .article-body { line-height: 1.85; color: #222; margin-bottom: 28px; }
+    .article-body p            { margin-bottom: 1.25rem; }
+    .article-body h2           { font-size: 20px; font-weight: 700; color: #111; margin: 2rem 0 .8rem; }
+    .article-body h3           { font-size: 17px; font-weight: 700; color: #111; margin: 1.6rem 0 .6rem; }
+    .article-body h4           { font-size: 15px; font-weight: 700; color: #111; margin: 1.2rem 0 .5rem; }
+    .article-body ul, .article-body ol { margin: 0 0 1.25rem 1.5rem; }
+    .article-body li           { margin-bottom: .4rem; }
+    .article-body a            { color: #7F77DD; text-decoration: underline; }
+    .article-body blockquote   { border-left: 3px solid #7F77DD; padding: 4px 0 4px 18px; margin: 1.4rem 0; color: #666; font-style: italic; }
+    .article-body img          { max-width: 100%; border-radius: 8px; margin: 1rem 0; }
+    .article-body pre          { background: #1e1e2e; border-radius: 10px; padding: 18px; margin: 1.4rem 0; overflow-x: auto; }
+    .article-body pre code     { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 13px; color: #AFA9EC; background: none; padding: 0; }
+    .article-body p code       { font-family: 'SFMono-Regular', Consolas, monospace; background: #EEEDFE; color: #534AB7; padding: 2px 7px; border-radius: 4px; font-size: 13px; }
+    .article-body table        { width: 100%; border-collapse: collapse; margin: 1.4rem 0; font-size: 14px; }
+    .article-body th           { background: #f8f8f8; text-align: left; padding: 10px 14px; border: 1px solid #e8e8e8; font-weight: 600; }
+    .article-body td           { padding: 9px 14px; border: 1px solid #e8e8e8; }
+    .article-body hr           { border: none; border-top: 1px solid #e8e8e8; margin: 2rem 0; }
+
+    /* Like + share bar */
+    .like-bar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      padding: 16px 0;
+      border-top: 1px solid #f0f0f0;
+      border-bottom: 1px solid #f0f0f0;
+      margin-bottom: 24px;
+    }
+    .like-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 18px; border-radius: 20px;
+      border: 1px solid #e2e2e2; background: #fafafa;
+      cursor: pointer; font-size: 13px; color: #555;
+      font-family: inherit; transition: all .15s;
+    }
+    .like-btn:hover, .like-btn.liked { background: #EEEDFE; border-color: #AFA9EC; color: #534AB7; }
+    .like-btn svg  { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .like-btn.liked svg { fill: #7F77DD; stroke: #7F77DD; }
+
+    .share-btns { display: flex; gap: 7px; margin-left: auto; }
+    .share-btn  {
+      width: 32px; height: 32px; border-radius: 8px;
+      border: 1px solid #e2e2e2; background: #fafafa;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #555; transition: background .15s;
+    }
+    .share-btn:hover { background: #f0f0f0; }
+    .share-btn svg   { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    /* Tags footer */
+    .tags-footer { margin-bottom: 28px; }
+    .tags-label  { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+
+    /* Related posts */
+    .related       { margin-bottom: 28px; }
+    .related-title { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
+    .related-card  { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f8f8f8; text-decoration: none; color: inherit; transition: opacity .15s; }
+    .related-card:hover { opacity: .72; }
+    .related-card:last-child { border-bottom: none; }
+    .related-thumb { width: 62px; height: 62px; background: #EEEDFE; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .related-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .related-thumb svg { width: 22px; height: 22px; fill: none; stroke: #AFA9EC; stroke-width: 1.5; }
+    .related-tag   { font-size: 10px; color: #7F77DD; font-weight: 500; margin-bottom: 3px; }
+    .related-name  { font-size: 13px; font-weight: 600; color: #111; line-height: 1.3; }
+    .related-date  { font-size: 11px; color: #aaa; margin-top: 3px; }
+
+    /* ══════════════════════════════════════
+       Comments
+    ══════════════════════════════════════ */
+    .comments-section { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; overflow: hidden; }
+    .comments-header  { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+    .comments-title   { font-size: 14px; font-weight: 700; color: #111; }
+    .comment-badge    { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #EEEDFE; color: #534AB7; font-weight: 500; }
+
+    .comment-item  { padding: 16px 20px; border-bottom: 1px solid #f8f8f8; }
+    .comment-item:last-of-type { border-bottom: none; }
+    .comment-meta  { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .comment-av    { width: 26px; height: 26px; border-radius: 50%; background: #E1F5EE; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: #0F6E56; flex-shrink: 0; }
+    .comment-name  { font-size: 13px; font-weight: 600; color: #111; }
+    .comment-date  { font-size: 11px; color: #bbb; }
+    .comment-body  { font-size: 13px; color: #444; line-height: 1.65; }
+
+    /* Comment form */
+    .comment-form        { padding: 18px 20px; background: #fafafa; border-top: 1px solid #f0f0f0; }
+    .comment-form-title  { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 12px; }
+    .form-row-2          { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .form-input {
+      width: 100%; height: 36px; padding: 0 11px;
+      border: 1px solid #e2e2e2; border-radius: 8px;
+      background: #fff; color: #111; font-size: 13px; font-family: inherit; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-input:focus { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,.1); }
+    .form-input.is-invalid { border-color: #ef4444; }
+    .form-textarea {
+      width: 100%; padding: 10px 11px;
+      border: 1px solid #e2e2e2; border-radius: 8px;
+      background: #fff; color: #111; font-size: 13px; font-family: inherit; outline: none;
+      resize: vertical; min-height: 90px; margin-bottom: 10px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-textarea:focus  { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,.1); }
+    .error-text { font-size: 12px; color: #ef4444; margin-bottom: 8px; }
+    .btn-submit {
+      padding: 8px 20px; background: #7F77DD; border: none; border-radius: 8px;
+      color: #fff; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background .15s;
+    }
+    .btn-submit:hover { background: #534AB7; }
+
+    /* Alert */
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
+    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+    .alert-error   { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+
+    /* Login prompt */
+    .login-prompt {
+      padding: 16px 20px; background: #fafafa; border-top: 1px solid #f0f0f0;
+      text-align: center; font-size: 13px; color: #888;
+    }
+    .login-prompt a { color: #7F77DD; text-decoration: none; }
+    .login-prompt a:hover { text-decoration: underline; }
+
+    /* ══════════════════════════════════════
+       Sidebar
+    ══════════════════════════════════════ */
+    .sidebar-col    {}
+    .sidebar-card   { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .sidebar-card-title { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+
+    /* Table of contents */
+    .toc-item     { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; font-size: 13px; color: #555; cursor: pointer; border-radius: 6px; transition: color .15s; text-decoration: none; }
+    .toc-item:hover { color: #7F77DD; }
+    .toc-item.h3  { padding-left: 14px; font-size: 12px; color: #aaa; }
+    .toc-dot      { width: 6px; height: 6px; border-radius: 50%; background: #e2e2e2; flex-shrink: 0; margin-top: 5px; transition: background .2s; }
+    .toc-item.active      { color: #7F77DD; }
+    .toc-item.active .toc-dot { background: #7F77DD; }
+
+    /* Post stats */
+    .stat-mini       { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+    .stat-mini:last-child { border-bottom: none; }
+    .stat-mini-label { color: #888; }
+    .stat-mini-val   { font-weight: 600; color: #111; }
+
+    /* Author card */
+    .author-card-av   { width: 52px; height: 52px; border-radius: 50%; background: #7F77DD; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; margin: 0 auto 10px; overflow: hidden; }
+    .author-card-av img { width: 100%; height: 100%; object-fit: cover; }
+    .author-card-name { text-align: center; font-size: 14px; font-weight: 600; color: #111; margin-bottom: 3px; }
+    .author-card-bio  { text-align: center; font-size: 12px; color: #888; line-height: 1.5; margin-bottom: 10px; }
+    .author-card-stat { display: flex; justify-content: center; gap: 20px; }
+    .author-stat-item { text-align: center; }
+    .author-stat-n    { font-size: 15px; font-weight: 600; color: #111; }
+    .author-stat-l    { font-size: 10px; color: #aaa; }
+
+    /* ══════════════════════════════════════
+       Responsive
+    ══════════════════════════════════════ */
+    @media (max-width: 860px) {
+      .outer { grid-template-columns: 1fr; }
+      .sidebar-col { display: none; }
+    }
+    @media (max-width: 580px) {
+      .article-title  { font-size: 22px; }
+      .outer          { padding: 16px; gap: 16px; }
+      .article-thumb  { height: 200px; }
+      .meta-stats     { display: none; }
+      .form-row-2     { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     Top navigation
+════════════════════════════════════════════ -->
+<nav class="topnav">
+  <a href="{% url 'blog:post_list' %}" class="nav-logo">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    Blogger
+  </a>
+  <div class="nav-right">
+    <a href="{% url 'blog:post_list' %}" class="btn-back">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      All posts
+    </a>
+    {% if request.user == post.author or request.user.is_staff %}
+      <a href="{% url 'blog:post_edit' post.pk %}" class="btn-sm">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Edit
+      </a>
+      <form method="POST" action="{% url 'blog:post_delete' post.pk %}" style="display:inline"
+            onsubmit="return confirm('Delete this post? This cannot be undone.')">
+        {% csrf_token %}
+        <button type="submit" class="btn-sm danger">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Delete
+        </button>
+      </form>
+    {% endif %}
+    {% if request.user.is_authenticated %}
+      <a href="{% url 'accounts:dashboard' %}" class="btn-sm">Dashboard</a>
+    {% else %}
+      <a href="{% url 'accounts:login' %}" class="btn-sm">Sign in</a>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     Main content grid
+════════════════════════════════════════════ -->
+<div class="outer">
+
+  <!-- ── Article column ── -->
+  <article class="article-col">
+
+    <!-- Header -->
+    <header class="article-header">
+
+      <div class="article-tags">
+        {% for tag in post.tags.all %}
+          <a href="{% url 'blog:tag_detail' tag.slug %}" class="tag-pill">{{ tag.name }}</a>
+        {% endfor %}
+      </div>
+
+      <h1 class="article-title">{{ post.title }}</h1>
+
+      <div class="article-meta">
+        <div class="author-wrap">
+          <div class="author-av">
+            {% if post.author.profile.avatar %}
+              <img src="{{ post.author.profile.avatar.url }}" alt="{{ post.author.get_full_name }}" />
+            {% else %}
+              {{ post.author.first_name|first|upper }}{{ post.author.last_name|first|upper }}
+            {% endif %}
+          </div>
+          <div>
+            <div class="author-name">{{ post.author.get_full_name|default:post.author.username }}</div>
+            <div class="author-date">
+              {{ post.published_at|date:"F j, Y" }}
+              &middot; {{ post.read_time }} min read
+            </div>
+          </div>
+        </div>
+        <div class="meta-stats">
+          <span class="meta-stat">
+            <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            {{ post.view_count|default:0 }} views
+          </span>
+          <span class="meta-stat">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            {{ comments|length }} comment{{ comments|length|pluralize }}
+          </span>
+          <span class="meta-stat">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            {{ post.like_count }} like{{ post.like_count|pluralize }}
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Thumbnail -->
+    <div class="article-thumb">
+      {% if post.thumbnail %}
+        <img src="{{ post.thumbnail.url }}" alt="{{ post.title }}" />
+      {% else %}
+        <svg class="article-thumb-icon" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+      {% endif %}
+    </div>
+
+    <!-- Post body — rendered as HTML (use |safe if content is pre-sanitised) -->
+    <div class="article-body" id="article-body">
+      {{ post.content|linebreaks }}
+    </div>
+
+    <!-- Like + share bar -->
+    <div class="like-bar">
+      {% if request.user.is_authenticated %}
+        <form method="POST" action="{% url 'blog:toggle_like' post.pk %}" id="like-form">
+          {% csrf_token %}
+          <button type="submit" class="like-btn {% if user_liked %}liked{% endif %}" id="like-btn">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            <span id="like-count">{{ post.like_count }}</span> like{{ post.like_count|pluralize }}
+          </button>
+        </form>
+      {% else %}
+        <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="like-btn">
+          <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          {{ post.like_count }} like{{ post.like_count|pluralize }}
+        </a>
+      {% endif %}
+
+      <div class="share-btns">
+        <button class="share-btn" title="Copy link" onclick="copyLink()">
+          <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </button>
+        <a class="share-btn" title="Share on Twitter"
+           href="https://twitter.com/intent/tweet?text={{ post.title|urlencode }}&url={{ request.build_absolute_uri }}"
+           target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
+        </a>
+        <a class="share-btn" title="Share on LinkedIn"
+           href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.build_absolute_uri|urlencode }}"
+           target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- Tags footer -->
+    <div class="tags-footer">
+      <div class="tags-label">Tags</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        {% for tag in post.tags.all %}
+          <a href="{% url 'blog:tag_detail' tag.slug %}" class="tag-pill">{{ tag.name }}</a>
+        {% empty %}
+          <span style="font-size:13px;color:#aaa">No tags</span>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Related posts -->
+    {% if related %}
+      <div class="related">
+        <div class="related-title">Related posts</div>
+        {% for rp in related %}
+          <a href="{% url 'blog:post_detail' rp.slug %}" class="related-card">
+            <div class="related-thumb">
+              {% if rp.thumbnail %}
+                <img src="{{ rp.thumbnail.url }}" alt="{{ rp.title }}" />
+              {% else %}
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              {% endif %}
+            </div>
+            <div>
+              <div class="related-tag">
+                {% for tag in rp.tags.all|slice:":1" %}{{ tag.name }}{% endfor %}
+              </div>
+              <div class="related-name">{{ rp.title }}</div>
+              <div class="related-date">{{ rp.published_at|date:"M d, Y" }}</div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- ── Comments ── -->
+    <section class="comments-section" id="comments">
+      <div class="comments-header">
+        <span class="comments-title">Comments</span>
+        <span class="comment-badge">{{ comments|length }}</span>
+      </div>
+
+      {% if messages %}
+        <div style="padding:0 20px;margin-top:14px">
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% for comment in comments %}
+        <div class="comment-item">
+          <div class="comment-meta">
+            <div class="comment-av">
+              {{ comment.name|first|upper }}{{ comment.name|slice:"1:2"|upper }}
+            </div>
+            <span class="comment-name">{{ comment.name }}</span>
+            <span class="comment-date">{{ comment.created_at|date:"M d, Y" }}</span>
+          </div>
+          <div class="comment-body">{{ comment.body|linebreaks }}</div>
+        </div>
+      {% empty %}
+        <div style="padding:24px 20px;text-align:center;color:#aaa;font-size:13px">
+          No comments yet. Be the first to share your thoughts!
+        </div>
+      {% endfor %}
+
+      <!-- Comment form -->
+      {% if request.user.is_authenticated %}
+        <div class="comment-form">
+          <div class="comment-form-title">Leave a comment</div>
+          <form method="POST" action="{% url 'blog:post_detail' post.slug %}#comments">
+            {% csrf_token %}
+            <div class="form-row-2">
+              <div>
+                <input
+                  type="text" name="name" class="form-input"
+                  placeholder="Your name"
+                  value="{{ request.user.get_full_name|default:request.user.username }}"
+                  required
+                />
+              </div>
+              <div>
+                <input
+                  type="email" name="email" class="form-input"
+                  placeholder="Email (not shown)"
+                  value="{{ request.user.email }}"
+                />
+              </div>
+            </div>
+            <textarea
+              name="body" class="form-textarea"
+              placeholder="Write your comment…"
+              required
+              maxlength="1000"
+            ></textarea>
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:11px;color:#aaa">Your comment will be visible after moderation.</span>
+              <button type="submit" class="btn-submit">Post comment</button>
+            </div>
+          </form>
+        </div>
+      {% else %}
+        <div class="login-prompt">
+          <a href="{% url 'accounts:login' %}?next={{ request.path }}#comments">Sign in</a>
+          to leave a comment.
+        </div>
+      {% endif %}
+
+    </section>
+  </article>
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar-col">
+
+    <!-- Table of contents (auto-built from article headings via JS) -->
+    <div class="sidebar-card" id="toc-card">
+      <div class="sidebar-card-title">Table of contents</div>
+      <div id="toc-list">
+        <span style="font-size:12px;color:#aaa">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Post stats -->
+    <div class="sidebar-card">
+      <div class="sidebar-card-title">Post stats</div>
+      <div class="stat-mini">
+        <span class="stat-mini-label">Views</span>
+        <span class="stat-mini-val">{{ post.view_count|default:0 }}</span>
+      </div>
+      <div class="stat-mini">
+        <span class="stat-mini-label">Likes</span>
+        <span class="stat-mini-val">{{ post.like_count }}</span>
+      </div>
+      <div class="stat-mini">
+        <span class="stat-mini-label">Comments</span>
+        <span class="stat-mini-val">{{ comments|length }}</span>
+      </div>
+      <div class="stat-mini">
+        <span class="stat-mini-label">Read time</span>
+        <span class="stat-mini-val">{{ post.read_time }} min</span>
+      </div>
+      <div class="stat-mini">
+        <span class="stat-mini-label">Published</span>
+        <span class="stat-mini-val">{{ post.published_at|date:"M d, Y" }}</span>
+      </div>
+      {% if post.updated_at != post.created_at %}
+        <div class="stat-mini">
+          <span class="stat-mini-label">Last updated</span>
+          <span class="stat-mini-val">{{ post.updated_at|date:"M d, Y" }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Author card -->
+    <div class="sidebar-card">
+      <div class="sidebar-card-title">About the author</div>
+      <div class="author-card-av">
+        {% if post.author.profile.avatar %}
+          <img src="{{ post.author.profile.avatar.url }}" alt="{{ post.author.get_full_name }}" />
+        {% else %}
+          {{ post.author.first_name|first|upper }}{{ post.author.last_name|first|upper }}
+        {% endif %}
+      </div>
+      <div class="author-card-name">{{ post.author.get_full_name|default:post.author.username }}</div>
+      {% if post.author.profile.bio %}
+        <div class="author-card-bio">{{ post.author.profile.bio|truncatewords:20 }}</div>
+      {% endif %}
+      <div class="author-card-stat">
+        <div class="author-stat-item">
+          <div class="author-stat-n">{{ post.author.posts.count }}</div>
+          <div class="author-stat-l">Posts</div>
+        </div>
+        <div class="author-stat-item">
+          <div class="author-stat-n">{{ post.author.posts.aggregate_views|default:0 }}</div>
+          <div class="author-stat-l">Views</div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+</div>
+
+<script>
+  /* ── Table of contents builder ── */
+  (function () {
+    var body    = document.getElementById('article-body');
+    var tocList = document.getElementById('toc-list');
+    if (!body || !tocList) return;
+
+    var headings = body.querySelectorAll('h2, h3');
+    if (headings.length === 0) {
+      document.getElementById('toc-card').style.display = 'none';
+      return;
+    }
+
+    tocList.innerHTML = '';
+    headings.forEach(function (h, i) {
+      if (!h.id) h.id = 'heading-' + i;
+      var a       = document.createElement('a');
+      a.href      = '#' + h.id;
+      a.className = 'toc-item' + (h.tagName === 'H3' ? ' h3' : '');
+      a.innerHTML = '<div class="toc-dot"></div>' + h.textContent;
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      tocList.appendChild(a);
+    });
+
+    /* Highlight active heading on scroll */
+    var tocLinks = tocList.querySelectorAll('.toc-item');
+    window.addEventListener('scroll', function () {
+      var scrollY = window.scrollY + 80;
+      var active  = 0;
+      headings.forEach(function (h, i) {
+        if (h.getBoundingClientRect().top + window.scrollY <= scrollY) active = i;
+      });
+      tocLinks.forEach(function (l, i) {
+        l.classList.toggle('active', i === active);
+      });
+    });
+  })();
+
+  /* ── AJAX-style like toggle ── */
+  (function () {
+    var form = document.getElementById('like-form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn   = document.getElementById('like-btn');
+      var count = document.getElementById('like-count');
+      fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        btn.classList.toggle('liked', data.liked);
+        count.textContent = data.like_count;
+      })
+      .catch(function () { form.submit(); }); /* fallback */
+    });
+  })();
+
+  /* ── Copy link to clipboard ── */
+  function copyLink() {
+    navigator.clipboard.writeText(window.location.href)
+      .then(function () { alert('Link copied to clipboard!'); })
+      .catch(function () { prompt('Copy this link:', window.location.href); });
+  }
+</script>
+
+</body>
+</html>

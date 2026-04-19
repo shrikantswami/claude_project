@@ -24,17 +24,18 @@ urlpatterns = [
         name="post_list",
     ),
     path(
+        "post/new/",
+        views.PostCreateView.as_view(),
+        name="post_create",
+    ),
+    path(
         "post/<slug:slug>/",
         views.PostDetailView.as_view(),
         name="post_detail",
     ),
 
     # ── Post CRUD (login required) ───────────────────────────
-    path(
-        "post/new/",
-        views.PostCreateView.as_view(),
-        name="post_create",
-    ),
+
     path(
         "post/<int:pk>/edit/",
         views.PostEditView.as_view(),
