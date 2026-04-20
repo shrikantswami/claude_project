@@ -700,3 +700,44 @@ def unschedule_post(request, pk):
 
     messages.success(request, f'"{post.title}" has been moved back to drafts.')
     return redirect("blog:draft_list")
+
+def subscribe(request):
+    if request.method == "POST":
+        email = request.POST.get("email", "").strip()
+        if email:
+            Subscriber.objects.get_or_create(
+                email=email,
+                author=request.user if request.user.is_authenticated else None,
+            )
+            messages.success(request, "You're subscribed! Thanks for joining.")
+        else:
+            messages.error(request, "Please enter a valid email address.")
+    return redirect("home")
+
+class HomeView(View):
+    template_name = "blog/home.html"
+
+    def get(self, request):
+        # Logged-in authors go straight to dashboard
+        if request.user.is_authenticated:
+            return redirect("accounts:dashboard")
+
+        # Public visitors see the blog landing page
+        latest_posts = Post.objects.filter(
+            status="published"
+        ).select_related("author").prefetch_related("tags").order_by("-published_at")[:6]
+
+        featured_post = Post.objects.filter(
+            status="published"
+        ).select_related("author").order_by("-view_count").first()
+
+        from django.db.models import Count
+        popular_tags = Tag.objects.annotate(
+            post_count=Count("posts")
+        ).filter(post_count__gt=0).order_by("-post_count")[:10]
+
+        return render(request, self.template_name, {
+            "latest_posts":  latest_posts,
+            "featured_post": featured_post,
+            "popular_tags":  popular_tags,
+        })

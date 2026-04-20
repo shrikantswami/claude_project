@@ -112,4 +112,6 @@ urlpatterns = [
         views.tag_detail,
         name="tag_detail",
     ),
+    path("subscribe/", views.subscribe, name="subscribe"),
+
 ]
