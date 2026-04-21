@@ -13,20 +13,32 @@ Complete views for the Blogger app covering:
 
 All write operations require login.
 """
+import re
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
+from django.shortcuts import render
+from django.utils.html import escape
+from django.utils.safestring import mark_safe
 
+
+
+
+import csv
 import json
-from datetime import timedelta
+from datetime import timedelta, date
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Q, Sum, Count
+from django.db.models import Q, Sum, Count, Avg
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.text import slugify
 from django.views import View
+from django.http import HttpResponse
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView,
 )
@@ -514,35 +526,6 @@ def audience(request):
     })
 
 
-# ═══════════════════════════════════════════════════════════
-#  SEARCH VIEW
-# ═══════════════════════════════════════════════════════════
-
-def search(request):
-    """
-    Dedicated search results page.
-    URL name: blog:search
-    """
-    query = request.GET.get("q", "").strip()
-    posts = Post.objects.none()
-
-    if query:
-        posts = Post.objects.filter(
-            status="published"
-        ).filter(
-            Q(title__icontains=query) |
-            Q(content__icontains=query) |
-            Q(excerpt__icontains=query) |
-            Q(tags__name__icontains=query)
-        ).distinct().order_by("-published_at")
-
-    page = paginate(posts, request, per_page=10)
-    return render(request, "blog/search_results.html", {
-        "posts": page,
-        "query": query,
-        "count": posts.count() if query else 0,
-    })
-
 
 # ═══════════════════════════════════════════════════════════
 #  TAG VIEW
@@ -741,3 +724,601 @@ class HomeView(View):
             "featured_post": featured_post,
             "popular_tags":  popular_tags,
         })
+
+"""
+Stats view — add/replace in blog/views.py
+────────────────────────────────────────────────────────────
+Provides a full analytics overview for the logged-in author.
+
+Supports ?range= query param:
+    7   → last 7 days
+    30  → last 30 days  (default)
+    90  → last 90 days
+    all → all time
+
+Context variables passed to stats.html:
+    selected_range      str   '7' | '30' | '90' | 'all'
+    period_label        str   e.g. "Last 30 days"
+    range_start         date
+    range_end           date
+
+    total_views         int
+    total_posts         int
+    total_comments      int
+    total_likes         int
+    posts_this_period   int   posts published in the selected range
+    new_comments        int   comments received today
+    views_change        int   % change vs previous period (signed)
+    views_change_abs    int   abs(views_change)
+    likes_change        int   change in likes count vs prev period (signed)
+    likes_change_abs    int   abs(likes_change)
+
+    top_posts           QuerySet  top 5 by view_count
+    avg_views_per_post  int
+    avg_read_time       int   minutes
+    comment_rate        str   e.g. "1.5"
+    like_rate           str   e.g. "6.8"
+    most_active_tag     str   name of the most-used tag
+    total_words         int   total word count across all posts
+
+    daily_labels        JSON  list of date strings for views line chart
+    daily_views_data    JSON  list of view counts per day
+    monthly_labels      JSON  list of month labels for bar chart
+    monthly_counts      JSON  list of post counts per month
+"""
+
+
+
+
+@login_required(login_url="accounts:login")
+def stats(request):
+
+    # ── Date range ────────────────────────────────────────────
+    selected_range = request.GET.get("range", "30")
+    now            = timezone.now()
+    today          = now.date()
+
+    if selected_range == "7":
+        range_days   = 7
+        period_label = "Last 7 days"
+        range_start  = today - timedelta(days=6)
+    elif selected_range == "90":
+        range_days   = 90
+        period_label = "Last 90 days"
+        range_start  = today - timedelta(days=89)
+    elif selected_range == "all":
+        range_days   = None
+        period_label = "All time"
+        first_post   = Post.objects.filter(
+            author=request.user, status="published"
+        ).order_by("published_at").first()
+        range_start  = first_post.published_at.date() if first_post else today
+    else:
+        selected_range = "30"
+        range_days   = 30
+        period_label = "Last 30 days"
+        range_start  = today - timedelta(days=29)
+
+    range_end = today
+
+    # ── Base querysets ────────────────────────────────────────
+    all_posts = Post.objects.filter(
+        author=request.user, status="published"
+    ).prefetch_related("tags")
+
+    if range_days:
+        period_posts = all_posts.filter(published_at__date__gte=range_start)
+        prev_start   = range_start - timedelta(days=range_days)
+        prev_posts   = all_posts.filter(
+            published_at__date__gte=prev_start,
+            published_at__date__lt=range_start,
+        )
+    else:
+        period_posts = all_posts
+        prev_posts   = Post.objects.none()
+
+    all_comments = Comment.objects.filter(post__author=request.user)
+    all_likes    = Like.objects.filter(post__author=request.user)
+
+    # ── Stat card values ──────────────────────────────────────
+    total_posts    = all_posts.count()
+    total_views    = all_posts.aggregate(t=Sum("view_count"))["t"] or 0
+    total_comments = all_comments.count()
+    total_likes    = all_likes.count()
+    posts_this_period = period_posts.count()
+    new_comments   = all_comments.filter(created_at__date=today).count()
+
+    # Views change vs previous period
+    period_views = period_posts.aggregate(t=Sum("view_count"))["t"] or 0
+    prev_views   = prev_posts.aggregate(t=Sum("view_count"))["t"] or 0
+    if prev_views > 0:
+        views_change = round(((period_views - prev_views) / prev_views) * 100)
+    else:
+        views_change = 0
+    views_change_abs = abs(views_change)
+
+    # Likes change vs previous period
+    period_likes = Like.objects.filter(
+        post__author=request.user,
+        created_at__date__gte=range_start,
+    ).count() if range_days else total_likes
+    prev_likes = Like.objects.filter(
+        post__author=request.user,
+        created_at__date__gte=range_start - timedelta(days=range_days) if range_days else today,
+        created_at__date__lt=range_start,
+    ).count() if range_days else 0
+    likes_change     = period_likes - prev_likes
+    likes_change_abs = abs(likes_change)
+
+    # ── Top 5 posts ───────────────────────────────────────────
+    top_posts = all_posts.order_by("-view_count")[:5]
+
+    # ── Quick summary stats ───────────────────────────────────
+    avg_views_per_post = round(total_views / total_posts) if total_posts else 0
+
+    avg_read_time_raw  = all_posts.aggregate(a=Avg("read_time"))["a"]
+    avg_read_time      = round(avg_read_time_raw) if avg_read_time_raw else 0
+
+    comment_rate = (
+        round((total_comments / total_views) * 100, 1) if total_views else 0
+    )
+    like_rate = (
+        round((total_likes / total_views) * 100, 1) if total_views else 0
+    )
+
+    # Most active tag (tag with most published posts by this author)
+    most_active_tag_obj = (
+        Tag.objects.filter(posts__author=request.user, posts__status="published")
+        .annotate(cnt=Count("posts"))
+        .order_by("-cnt")
+        .first()
+    )
+    most_active_tag = most_active_tag_obj.name if most_active_tag_obj else "—"
+
+    # Total words written
+    total_words = sum(
+        len(p.content.split()) for p in all_posts
+    )
+
+    # ── Daily views chart data (line chart) ───────────────────
+    # Show daily breakdown for the selected period
+    chart_days = range_days if range_days else min(
+        (today - range_start).days + 1, 90
+    )
+    chart_days = min(chart_days, 90)   # cap at 90 data points
+
+    daily_labels     = []
+    daily_views_data = []
+
+    for i in range(chart_days - 1, -1, -1):
+        day = today - timedelta(days=i)
+        day_views = all_posts.filter(
+            published_at__date=day
+        ).aggregate(t=Sum("view_count"))["t"] or 0
+
+        if chart_days <= 14:
+            label = day.strftime("%b %d")
+        elif chart_days <= 60:
+            label = day.strftime("%b %d")
+        else:
+            label = day.strftime("%b %d")
+
+        daily_labels.append(label)
+        daily_views_data.append(day_views)
+
+    # ── Monthly posts chart data (bar chart) ──────────────────
+    monthly_labels = []
+    monthly_counts = []
+
+    for i in range(5, -1, -1):
+        # Go back i full months from the current month
+        if now.month - i > 0:
+            m_month = now.month - i
+            m_year  = now.year
+        else:
+            m_month = now.month - i + 12
+            m_year  = now.year - 1
+
+        count = all_posts.filter(
+            published_at__year=m_year,
+            published_at__month=m_month,
+        ).count()
+
+        monthly_labels.append(
+            date(m_year, m_month, 1).strftime("%b")
+        )
+        monthly_counts.append(count)
+
+    # ── Build context ─────────────────────────────────────────
+    context = {
+        # Range controls
+        "selected_range": selected_range,
+        "period_label":   period_label,
+        "range_start":    range_start,
+        "range_end":      range_end,
+
+        # Stat cards
+        "total_views":        f"{total_views:,}" if total_views >= 1000 else total_views,
+        "total_posts":        total_posts,
+        "total_comments":     total_comments,
+        "total_likes":        total_likes,
+        "posts_this_period":  posts_this_period,
+        "new_comments":       new_comments,
+        "views_change":       views_change,
+        "views_change_abs":   views_change_abs,
+        "likes_change":       likes_change,
+        "likes_change_abs":   likes_change_abs,
+
+        # Top posts
+        "top_posts":           top_posts,
+
+        # Quick summary
+        "avg_views_per_post":  avg_views_per_post,
+        "avg_read_time":       avg_read_time,
+        "comment_rate":        comment_rate,
+        "like_rate":           like_rate,
+        "most_active_tag":     most_active_tag,
+        "total_words":         f"{total_words:,}",
+
+        # Chart data — JSON-serialisable
+        "daily_labels":      json.dumps(daily_labels),
+        "daily_views_data":  json.dumps(daily_views_data),
+        "monthly_labels":    json.dumps(monthly_labels),
+        "monthly_counts":    json.dumps(monthly_counts),
+    }
+
+    return render(request, "blog/stats.html", context)
+
+# ─────────────────────────────────────────────
+#  Audience view
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def audience(request):
+    """
+    Subscriber management page.
+    Supports:
+      ?q=      email search
+      ?status= active | inactive
+      ?page=   pagination
+      ?export=csv  → triggers CSV download
+    """
+
+    # ── CSV export ───────────────────────────
+    if request.GET.get("export") == "csv":
+        return export_audience_csv(request)
+
+    # ── Base queryset ────────────────────────
+    all_subs = Subscriber.objects.filter(
+        author=request.user
+    ).order_by("-subscribed_at")
+
+    # ── Search ───────────────────────────────
+    query = request.GET.get("q", "").strip()
+    if query:
+        all_subs = all_subs.filter(email__icontains=query)
+
+    # ── Status filter ────────────────────────
+    status_filter = request.GET.get("status", "").strip()
+    if status_filter == "active":
+        all_subs = all_subs.filter(is_active=True)
+    elif status_filter == "inactive":
+        all_subs = all_subs.filter(is_active=False)
+
+    # ── Paginate ─────────────────────────────
+    subscribers = _paginate(all_subs, request, per_page=20)
+
+    # ── Stat card values ─────────────────────
+    base = Subscriber.objects.filter(author=request.user)
+
+    total          = base.count()
+    active_count   = base.filter(is_active=True).count()
+    inactive_count = base.filter(is_active=False).count()
+    retention_rate = round((active_count / total) * 100, 1) if total else 0
+
+    now            = timezone.now()
+    month_start    = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_month_end = month_start - timedelta(seconds=1)
+    last_month_start = (last_month_end.replace(day=1))
+
+    new_this_month  = base.filter(subscribed_at__gte=month_start).count()
+    new_last_month  = base.filter(
+        subscribed_at__gte=last_month_start,
+        subscribed_at__lt=month_start,
+    ).count()
+    month_change    = new_this_month - new_last_month
+    growth_rate     = round((new_this_month / active_count) * 100, 1) if active_count else 0
+
+    # ── Monthly breakdown (last 6 months) ────
+    monthly_labels    = []
+    monthly_counts    = []
+    monthly_breakdown = []
+    max_count         = 1
+
+    for i in range(5, -1, -1):
+        if now.month - i > 0:
+            m_month = now.month - i
+            m_year  = now.year
+        else:
+            m_month = now.month - i + 12
+            m_year  = now.year - 1
+
+        count = base.filter(
+            subscribed_at__year=m_year,
+            subscribed_at__month=m_month,
+        ).count()
+
+        label = date(m_year, m_month, 1).strftime("%b %Y")
+        monthly_labels.append(date(m_year, m_month, 1).strftime("%b"))
+        monthly_counts.append(count)
+        monthly_breakdown.append({"label": label, "count": count, "pct": 0})
+        max_count = max(max_count, count)
+
+    # Calculate bar widths as percentage of the best month
+    for item in monthly_breakdown:
+        item["pct"] = round((item["count"] / max_count) * 100) if max_count else 0
+
+    # Best month label
+    best_idx   = monthly_counts.index(max(monthly_counts)) if monthly_counts else -1
+    best_month = monthly_breakdown[best_idx]["label"] if best_idx >= 0 and max(monthly_counts) > 0 else None
+
+    # Avg per month
+    avg_per_month = round(sum(monthly_counts) / len(monthly_counts)) if monthly_counts else 0
+
+    return render(request, "blog/audience.html", {
+        # Paginated list
+        "subscribers":    subscribers,
+        "query":          query,
+        "status_filter":  status_filter,
+
+        # Stat cards
+        "total":          total,
+        "active_count":   active_count,
+        "inactive_count": inactive_count,
+        "retention_rate": retention_rate,
+        "new_this_month": new_this_month,
+        "month_change":   month_change,
+        "growth_rate":    growth_rate,
+
+        # Right sidebar
+        "monthly_breakdown": monthly_breakdown,
+        "best_month":     best_month,
+        "avg_per_month":  avg_per_month,
+
+        # Chart data (JSON)
+        "monthly_labels": json.dumps(monthly_labels),
+        "monthly_counts": json.dumps(monthly_counts),
+    })
+
+
+# ─────────────────────────────────────────────
+#  Remove subscriber
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def remove_subscriber(request, pk):
+    """
+    Mark a subscriber as inactive (soft delete).
+    Only accepts POST.
+    """
+    if request.method != "POST":
+        return redirect("blog:audience")
+
+    subscriber = get_object_or_404(Subscriber, pk=pk, author=request.user)
+    subscriber.is_active = False
+    subscriber.save(update_fields=["is_active"])
+
+    messages.success(request, f"{subscriber.email} has been removed from your subscribers.")
+    return redirect("blog:audience")
+
+
+# ─────────────────────────────────────────────
+#  Export CSV
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def export_audience_csv(request):
+    """
+    Download all active subscribers as a CSV file.
+    Triggered by ?export=csv on the audience page.
+    """
+    subscribers = Subscriber.objects.filter(
+        author=request.user, is_active=True
+    ).order_by("-subscribed_at")
+
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="subscribers.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(["Email", "Subscribed at", "Status"])
+
+    for sub in subscribers:
+        writer.writerow([
+            sub.email,
+            sub.subscribed_at.strftime("%Y-%m-%d %H:%M"),
+            "Active" if sub.is_active else "Inactive",
+        ])
+
+    return response
+
+
+# ─────────────────────────────────────────────
+#  Highlight helper
+# ─────────────────────────────────────────────
+def _highlight(text, query, max_chars=200):
+    """
+    Return a short snippet of `text` with `query` terms wrapped in <mark>.
+    Tries to centre the snippet around the first match.
+    """
+    if not text or not query:
+        return text
+
+    safe_text  = escape(text)
+    terms      = [re.escape(t) for t in query.split() if len(t) > 1]
+    if not terms:
+        return safe_text[:max_chars]
+
+    pattern = re.compile(r'(' + '|'.join(terms) + r')', re.IGNORECASE)
+
+    # Find first match position for snippet centering
+    match = pattern.search(safe_text)
+    if match:
+        start = max(0, match.start() - 60)
+        end   = min(len(safe_text), start + max_chars)
+        snippet = ('…' if start > 0 else '') + safe_text[start:end] + ('…' if end < len(safe_text) else '')
+    else:
+        snippet = safe_text[:max_chars] + ('…' if len(safe_text) > max_chars else '')
+
+    # Wrap matches in <mark>
+    highlighted = pattern.sub(r'<mark>\1</mark>', snippet)
+    return mark_safe(highlighted)
+
+
+# ─────────────────────────────────────────────
+#  Search view
+# ─────────────────────────────────────────────
+def search(request):
+    """
+    Full-text search across published posts.
+    No login required — public page.
+    """
+    query       = request.GET.get("q", "").strip()
+    filter_type = request.GET.get("filter", "").strip()
+    sort        = request.GET.get("sort", "relevance").strip()
+
+    posts_qs    = Post.objects.none()
+    count       = 0
+    related_tags= Tag.objects.none()
+    suggestions = []
+
+    if query:
+        base = Post.objects.filter(
+            status="published"
+        ).select_related("author").prefetch_related("tags")
+
+        # ── Apply field filter ────────────────
+        if filter_type == "title":
+            base = base.filter(title__icontains=query)
+
+        elif filter_type == "tags":
+            base = base.filter(tags__name__icontains=query).distinct()
+
+        else:
+            # Search across all fields
+            base = base.filter(
+                Q(title__icontains=query)   |
+                Q(content__icontains=query) |
+                Q(excerpt__icontains=query) |
+                Q(tags__name__icontains=query) |
+                Q(author__first_name__icontains=query) |
+                Q(author__last_name__icontains=query)
+            ).distinct()
+
+        # ── Apply sort ───────────────────────
+        if sort == "latest":
+            base = base.order_by("-published_at")
+        elif sort == "views":
+            base = base.order_by("-view_count")
+        else:
+            # Default: sort by relevance — title matches first, then content
+            # Django ORM doesn't have native relevance scoring, so we
+            # approximate by putting title-matching posts first.
+            from django.db.models import Case, When, IntegerField
+            base = base.annotate(
+                relevance=Case(
+                    When(title__icontains=query, then=2),
+                    When(excerpt__icontains=query, then=1),
+                    default=0,
+                    output_field=IntegerField(),
+                )
+            ).order_by("-relevance", "-published_at")
+
+        count    = base.count()
+        posts_qs = base
+
+        # ── Attach highlighted fields ─────────
+        # We add highlighted_title and highlighted_excerpt as Python
+        # attributes rather than using Django template filters so the
+        # template can render them with |safe cleanly.
+        post_list = list(posts_qs[:200])   # materialise for annotation
+        for post in post_list:
+            post.highlighted_title   = _highlight(post.title,   query, max_chars=120)
+            post.highlighted_excerpt = _highlight(
+                post.excerpt or post.content, query, max_chars=220
+            )
+        # Re-wrap as a list for pagination (we already sliced for safety)
+        posts_qs = post_list
+
+        # ── Related tags ──────────────────────
+        related_tags = Tag.objects.filter(
+            name__icontains=query
+        ).order_by("name")[:8]
+
+        # ── Search suggestions ────────────────
+        suggestions = _build_suggestions(query)
+
+    # ── Popular posts (sidebar) ───────────────
+    popular_posts = Post.objects.filter(
+        status="published"
+    ).select_related("author").order_by("-view_count")[:5]
+
+    # ── Paginate ─────────────────────────────
+    paginator = Paginator(posts_qs, 10)
+    page_num  = request.GET.get("page", 1)
+    try:
+        posts_page = paginator.page(page_num)
+    except (PageNotAnInteger, EmptyPage):
+        posts_page = paginator.page(1)
+
+    return render(request, "blog/search_results.html", {
+        "query":        query,
+        "count":        count,
+        "posts":        posts_page,
+        "filter_type":  filter_type,
+        "sort":         sort,
+        "related_tags": related_tags,
+        "suggestions":  suggestions,
+        "popular_posts":popular_posts,
+    })
+
+
+# ─────────────────────────────────────────────
+#  Suggestion builder
+# ─────────────────────────────────────────────
+def _build_suggestions(query):
+    """
+    Generate up to 5 search suggestions based on:
+    1. Matching tag names
+    2. Partial title words from existing posts
+    These are shown in the sidebar when no results are found
+    and as "Try searching for" prompts.
+    """
+    suggestions = set()
+
+    # Tags that partially match the query
+    for tag in Tag.objects.filter(name__icontains=query)[:4]:
+        suggestions.add(tag.name)
+
+    # Words from post titles that contain the query
+    posts_with_match = Post.objects.filter(
+        status="published",
+        title__icontains=query,
+    ).values_list("title", flat=True)[:10]
+
+    for title in posts_with_match:
+        words = title.split()
+        for word in words:
+            clean = re.sub(r'[^\w\s]', '', word).strip()
+            if (
+                query.lower() in clean.lower() and
+                len(clean) > 3 and
+                clean.lower() != query.lower()
+            ):
+                suggestions.add(clean)
+
+    # Add some fixed related searches if the query looks like Django-related
+    django_hints = ["Django", "Python", "REST API", "deployment", "testing", "Celery"]
+    if len(suggestions) < 4:
+        for hint in django_hints:
+            if hint.lower() != query.lower() and len(suggestions) < 5:
+                suggestions.add(hint)
+
+    return sorted(suggestions)[:5]
+

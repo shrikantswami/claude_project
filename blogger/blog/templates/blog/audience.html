@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audience – Blogger</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #111; }
+
+    /* ── Layout ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar { width: 220px; background: #1a1a2e; display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    .sb-logo    { display: flex; align-items: center; gap: 10px; padding: 20px 18px 16px; }
+    .sb-icon    { width: 32px; height: 32px; background: #7F77DD; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .sb-icon svg{ width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; }
+    .sb-brand   { font-size: 16px; font-weight: 600; color: #fff; }
+    .sb-divider { height: 1px; background: rgba(255,255,255,.08); margin: 0 18px; }
+    .sb-section { padding: 12px 18px 4px; font-size: 10px; letter-spacing: .08em; color: rgba(255,255,255,.3); text-transform: uppercase; font-weight: 600; }
+    .sb-link    { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; margin: 1px 6px; font-size: 13px; color: rgba(255,255,255,.6); text-decoration: none; transition: background .15s; }
+    .sb-link svg{ width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+    .sb-link:hover   { background: rgba(255,255,255,.07); color: rgba(255,255,255,.85); }
+    .sb-link.active  { background: rgba(127,119,221,.25); color: #AFA9EC; }
+    .sb-link.active svg { stroke: #AFA9EC; }
+    .sb-spacer  { flex: 1; }
+    .sb-user    { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,.07); }
+    .sb-avatar  { width: 30px; height: 30px; border-radius: 50%; background: #7F77DD; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }
+    .sb-uname   { font-size: 13px; color: rgba(255,255,255,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sb-urole   { font-size: 11px; color: rgba(255,255,255,.35); }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar { background: #fff; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; flex-shrink: 0; position: sticky; top: 0; z-index: 10; }
+    .topbar-title { font-size: 16px; font-weight: 600; color: #111; }
+    .topbar-sub   { font-size: 12px; color: #888; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+    .btn-sm { display: flex; align-items: center; gap: 6px; font-size: 12px; padding: 7px 14px; border-radius: 7px; border: 1px solid #e2e2e2; background: #fafafa; color: #444; cursor: pointer; font-family: inherit; text-decoration: none; transition: background .15s; }
+    .btn-sm:hover { background: #f0f0f0; }
+    .btn-sm svg   { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .content { padding: 24px; flex: 1; }
+
+    /* Alert */
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+    .alert-error   { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .alert-info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+
+    /* ── Stat cards ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+    .stat-card  { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px 16px; }
+    .stat-icon-wrap { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+    .stat-icon-wrap svg { width: 15px; height: 15px; fill: none; stroke-width: 2; }
+    .stat-n { font-size: 22px; font-weight: 700; color: #111; line-height: 1; }
+    .stat-l { font-size: 11px; color: #aaa; margin-top: 3px; }
+    .stat-change { font-size: 11px; margin-top: 5px; }
+    .up   { color: #1D9E75; }
+    .down { color: #E24B4A; }
+    .neutral { color: #888; }
+
+    /* ── Two column grid ── */
+    .two-col { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
+
+    /* ── Cards ── */
+    .card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+    .card:last-child { margin-bottom: 0; }
+    .card-header { padding: 14px 18px 10px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; }
+    .card-title  { font-size: 14px; font-weight: 600; color: #111; }
+    .card-sub    { font-size: 11px; color: #aaa; }
+    .chart-wrap  { padding: 16px 18px; }
+
+    /* ── Toolbar (search + filter) ── */
+    .toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; }
+    .search-wrap  { position: relative; flex: 1; min-width: 180px; }
+    .search-icon  { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; fill: none; stroke: #bbb; stroke-width: 2; pointer-events: none; }
+    .search-input { width: 100%; height: 36px; padding: 0 10px 0 32px; border: 1px solid #e2e2e2; border-radius: 8px; background: #fff; color: #111; font-size: 13px; font-family: inherit; outline: none; transition: border-color .15s; }
+    .search-input:focus { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,.1); }
+    .filter-select { height: 36px; padding: 0 10px; border: 1px solid #e2e2e2; border-radius: 8px; background: #fff; color: #111; font-size: 13px; font-family: inherit; outline: none; }
+    .filter-select:focus { border-color: #7F77DD; }
+
+    /* ── Subscriber table ── */
+    .sub-table-head { display: grid; grid-template-columns: 1fr 120px 100px 80px; padding: 9px 18px; font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #f0f0f0; }
+    .sub-row { display: grid; grid-template-columns: 1fr 120px 100px 80px; padding: 11px 18px; border-bottom: 1px solid #f8f8f8; align-items: center; transition: background .15s; }
+    .sub-row:last-child { border-bottom: none; }
+    .sub-row:hover { background: #fafafa; }
+    .sub-email { font-size: 13px; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px; }
+    .sub-date  { font-size: 12px; color: #888; }
+    .sub-status{ display: inline-block; font-size: 10px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+    .active-pill { background: #E1F5EE; color: #0F6E56; }
+    .unsub-pill  { background: #F1EFE8; color: #5F5E5A; }
+    .sub-action  { display: flex; justify-content: flex-end; }
+    .act-danger { font-size: 11px; padding: 3px 9px; border-radius: 6px; border: 1px solid #fca5a5; background: #fff; color: #dc2626; cursor: pointer; font-family: inherit; transition: background .15s; }
+    .act-danger:hover { background: #fef2f2; }
+
+    /* ── Pagination ── */
+    .pagination { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 14px; border-top: 1px solid #f0f0f0; }
+    .page-btn   { width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e2e2; background: #fff; font-size: 13px; color: #555; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: inherit; text-decoration: none; transition: all .15s; }
+    .page-btn svg   { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .page-btn:hover { background: #f5f5f5; }
+    .page-btn.active  { background: #7F77DD; border-color: #7F77DD; color: #fff; }
+    .page-btn.disabled{ opacity: .4; pointer-events: none; }
+
+    /* ── Monthly growth bars ── */
+    .mini-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 18px; border-bottom: 1px solid #f8f8f8; font-size: 13px; }
+    .mini-row:last-child { border-bottom: none; }
+    .mini-label { color: #888; min-width: 60px; }
+    .mini-val   { font-weight: 600; color: #111; min-width: 30px; text-align: right; }
+    .growth-bar-bg   { flex: 1; height: 5px; background: #f0f0f0; border-radius: 3px; margin: 0 10px; }
+    .growth-bar-fill { height: 5px; background: #1D9E75; border-radius: 3px; }
+
+    /* ── Empty state ── */
+    .empty-state { text-align: center; padding: 48px 24px; }
+    .empty-icon  { width: 48px; height: 48px; fill: none; stroke: #ddd; stroke-width: 1.5; margin: 0 auto 14px; display: block; }
+    .empty-title { font-size: 15px; font-weight: 600; color: #666; margin-bottom: 5px; }
+    .empty-sub   { font-size: 13px; color: #aaa; }
+
+    /* ── Mobile ── */
+    .ham-btn { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+    .ham-btn svg { width: 20px; height: 20px; stroke: #555; fill: none; stroke-width: 2; }
+
+    @media (max-width: 960px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .two-col    { grid-template-columns: 1fr; }
+      .sub-table-head { grid-template-columns: 1fr 90px 90px 70px; }
+      .sub-row        { grid-template-columns: 1fr 90px 90px 70px; }
+    }
+    @media (max-width: 680px) {
+      .sidebar { display: none; }
+      .ham-btn { display: block; }
+      .content { padding: 14px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .sub-table-head { display: none; }
+      .sub-row { grid-template-columns: 1fr auto; gap: 6px; padding: 12px; }
+      .sub-date, .sub-status { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <span class="sb-brand">Blogger</span>
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-section">Main</div>
+    <a href="{% url 'accounts:dashboard' %}" class="sb-link"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a href="{% url 'blog:post_list' %}"      class="sb-link"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>My posts</a>
+    <a href="{% url 'blog:draft_list' %}"     class="sb-link"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Drafts</a>
+    <a href="{% url 'blog:comment_list' %}"   class="sb-link"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Comments</a>
+    <div class="sb-section">Analytics</div>
+    <a href="{% url 'blog:stats' %}"    class="sb-link"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Stats</a>
+    <a href="{% url 'blog:audience' %}" class="sb-link active"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Audience</a>
+    <div class="sb-section">Account</div>
+    <a href="{% url 'accounts:profile' %}"  class="sb-link"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</a>
+    <a href="{% url 'accounts:settings' %}" class="sb-link"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
+    <div class="sb-spacer"></div>
+    <form method="POST" action="{% url 'accounts:logout' %}" style="margin:0 6px 8px">
+      {% csrf_token %}
+      <button type="submit" class="sb-link" style="width:100%;background:none;border:none;cursor:pointer;font-family:inherit">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out
+      </button>
+    </form>
+    <div class="sb-user">
+      <div class="sb-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+      <div>
+        <div class="sb-uname">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div class="sb-urole">{{ request.user.email }}</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="ham-btn" onclick="document.getElementById('sidebar').style.display='flex'" aria-label="Menu">
+          <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div>
+          <div class="topbar-title">Audience</div>
+          <div class="topbar-sub">{{ total }} total subscriber{{ total|pluralize }}</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <a href="{% url 'blog:audience' %}?export=csv" class="btn-sm">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </a>
+      </div>
+    </div>
+
+    <div class="content">
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- ── Stat cards ── -->
+      <div class="stats-grid">
+
+        <div class="stat-card">
+          <div class="stat-icon-wrap" style="background:#EEEDFE">
+            <svg style="stroke:#534AB7" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div class="stat-n">{{ total }}</div>
+          <div class="stat-l">Total subscribers</div>
+          <div class="stat-change {% if new_this_month > 0 %}up{% else %}neutral{% endif %}">
+            {% if new_this_month > 0 %}↑ {{ new_this_month }} this month{% else %}No new this month{% endif %}
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrap" style="background:#E1F5EE">
+            <svg style="stroke:#0F6E56" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="stat-n">{{ new_this_month }}</div>
+          <div class="stat-l">New this month</div>
+          <div class="stat-change {% if month_change > 0 %}up{% elif month_change < 0 %}down{% else %}neutral{% endif %}">
+            {% if month_change > 0 %}↑ {{ month_change }} vs last month
+            {% elif month_change < 0 %}↓ {{ month_change|cut:"-" }} vs last month
+            {% else %}Same as last month{% endif %}
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrap" style="background:#FAEEDA">
+            <svg style="stroke:#854F0B" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="stat-n">{{ growth_rate }}%</div>
+          <div class="stat-l">Growth rate</div>
+          <div class="stat-change {% if growth_rate > 0 %}up{% else %}neutral{% endif %}">
+            Monthly average
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon-wrap" style="background:#FCEBEB">
+            <svg style="stroke:#A32D2D" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+          </div>
+          <div class="stat-n">{{ inactive_count }}</div>
+          <div class="stat-l">Unsubscribed</div>
+          <div class="stat-change neutral">{{ retention_rate }}% retention</div>
+        </div>
+
+      </div>
+
+      <!-- ── Charts + table ── -->
+      <div class="two-col">
+
+        <div>
+
+          <!-- Growth chart -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Subscriber growth</span>
+              <span class="card-sub">Last 6 months</span>
+            </div>
+            <div class="chart-wrap">
+              <div style="position:relative;height:180px">
+                <canvas id="growthChart"
+                        role="img"
+                        aria-label="Bar chart showing new subscribers per month for the last 6 months">
+                  Monthly subscriber counts.
+                </canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subscriber table -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Subscribers</span>
+              <span class="card-sub">
+                Showing {{ subscribers.start_index }}–{{ subscribers.end_index }}
+                of {{ subscribers.paginator.count }}
+              </span>
+            </div>
+
+            <!-- Toolbar -->
+            <form method="GET" action="{% url 'blog:audience' %}">
+              <div class="toolbar">
+                <div class="search-wrap">
+                  <svg class="search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input
+                    type="text" name="q" id="sub-search"
+                    class="search-input"
+                    placeholder="Search by email…"
+                    value="{{ query|default:'' }}"
+                    autocomplete="off"
+                  />
+                </div>
+                <select name="status" class="filter-select" onchange="this.form.submit()">
+                  <option value=""        {% if not status_filter %}selected{% endif %}>All</option>
+                  <option value="active"  {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                  <option value="inactive"{% if status_filter == 'inactive' %}selected{% endif %}>Unsubscribed</option>
+                </select>
+              </div>
+            </form>
+
+            {% if subscribers %}
+              <div class="sub-table-head">
+                <div>Email</div>
+                <div>Subscribed</div>
+                <div>Status</div>
+                <div></div>
+              </div>
+
+              {% for sub in subscribers %}
+                <div class="sub-row">
+                  <div class="sub-email">{{ sub.email }}</div>
+                  <div class="sub-date">{{ sub.subscribed_at|date:"M d, Y" }}</div>
+                  <div>
+                    <span class="sub-status {% if sub.is_active %}active-pill{% else %}unsub-pill{% endif %}">
+                      {% if sub.is_active %}Active{% else %}Unsubscribed{% endif %}
+                    </span>
+                  </div>
+                  <div class="sub-action">
+                    {% if sub.is_active %}
+                      <form method="POST" action="{% url 'blog:remove_subscriber' sub.pk %}"
+                            onsubmit="return confirm('Remove {{ sub.email }} from your subscribers?')">
+                        {% csrf_token %}
+                        <button type="submit" class="act-danger">Remove</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+
+              <!-- Pagination -->
+              {% if subscribers.paginator.num_pages > 1 %}
+                <div class="pagination">
+                  {% if subscribers.has_previous %}
+                    <a href="?page={{ subscribers.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                       class="page-btn"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></a>
+                  {% else %}
+                    <span class="page-btn disabled"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></span>
+                  {% endif %}
+
+                  {% for num in subscribers.paginator.page_range %}
+                    {% if subscribers.number == num %}
+                      <span class="page-btn active">{{ num }}</span>
+                    {% elif num > subscribers.number|add:"-3" and num < subscribers.number|add:"3" %}
+                      <a href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                         class="page-btn">{{ num }}</a>
+                    {% endif %}
+                  {% endfor %}
+
+                  {% if subscribers.has_next %}
+                    <a href="?page={{ subscribers.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}"
+                       class="page-btn"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></a>
+                  {% else %}
+                    <span class="page-btn disabled"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>
+                  {% endif %}
+                </div>
+              {% endif %}
+
+            {% else %}
+              <div class="empty-state">
+                <svg class="empty-icon" viewBox="0 0 24 24">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                </svg>
+                {% if query %}
+                  <div class="empty-title">No subscribers match "{{ query }}"</div>
+                  <div class="empty-sub">Try a different email address.</div>
+                {% else %}
+                  <div class="empty-title">No subscribers yet</div>
+                  <div class="empty-sub">Subscribers will appear here after signing up on your blog.</div>
+                {% endif %}
+              </div>
+            {% endif %}
+
+          </div>
+        </div>
+
+        <!-- Right sidebar -->
+        <div>
+
+          <!-- Monthly breakdown bars -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Monthly breakdown</span></div>
+            {% for month in monthly_breakdown %}
+              <div class="mini-row">
+                <span class="mini-label">{{ month.label }}</span>
+                <div class="growth-bar-bg">
+                  <div class="growth-bar-fill" style="width:{{ month.pct }}%"></div>
+                </div>
+                <span class="mini-val">+{{ month.count }}</span>
+              </div>
+            {% empty %}
+              <div style="padding:16px 18px;font-size:13px;color:#aaa">No data yet.</div>
+            {% endfor %}
+          </div>
+
+          <!-- Summary card -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Summary</span></div>
+            <div class="mini-row">
+              <span class="mini-label">Active</span>
+              <span class="mini-val">{{ active_count }}</span>
+            </div>
+            <div class="mini-row">
+              <span class="mini-label">Unsubscribed</span>
+              <span class="mini-val">{{ inactive_count }}</span>
+            </div>
+            <div class="mini-row">
+              <span class="mini-label">Retention rate</span>
+              <span class="mini-val">{{ retention_rate }}%</span>
+            </div>
+            <div class="mini-row">
+              <span class="mini-label">Avg per month</span>
+              <span class="mini-val">{{ avg_per_month }}</span>
+            </div>
+            <div class="mini-row">
+              <span class="mini-label">Best month</span>
+              <span class="mini-val">{{ best_month|default:"—" }}</span>
+            </div>
+            <div class="mini-row">
+              <span class="mini-label">Growth rate</span>
+              <span class="mini-val">{{ growth_rate }}%</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  var monthLabels = {{ monthly_labels|safe }};
+  var monthCounts = {{ monthly_counts|safe }};
+
+  new Chart(document.getElementById('growthChart'), {
+    type: 'bar',
+    data: {
+      labels: monthLabels,
+      datasets: [{
+        label: 'New subscribers',
+        data:  monthCounts,
+        backgroundColor: '#AFA9EC',
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#bbb', font: { size: 11 } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { stepSize: 5, color: '#bbb', font: { size: 11 } }, grid: { color: '#f5f5f5' } },
+      },
+    },
+  });
+
+  /* Debounced search */
+  (function () {
+    var input   = document.getElementById('sub-search');
+    var timeout = null;
+    if (!input) return;
+    input.addEventListener('input', function () {
+      clearTimeout(timeout);
+      timeout = setTimeout(function () {
+        var params = new URLSearchParams(window.location.search);
+        if (input.value.trim()) { params.set('q', input.value.trim()); }
+        else { params.delete('q'); }
+        params.delete('page');
+        window.location.search = params.toString();
+      }, 400);
+    });
+  })();
+</script>
+
+</body>
+</html>

@@ -113,5 +113,8 @@ urlpatterns = [
         name="tag_detail",
     ),
     path("subscribe/", views.subscribe, name="subscribe"),
+    path("audience/subscriber/<int:pk>/remove/",
+     views.remove_subscriber,
+     name="remove_subscriber"),
 
 ]
