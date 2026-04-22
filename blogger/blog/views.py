@@ -351,65 +351,6 @@ class PostDeleteView(LoginRequiredMixin, View):
 
 
 # ═══════════════════════════════════════════════════════════
-#  DRAFT VIEWS
-# ═══════════════════════════════════════════════════════════
-
-
-# ═══════════════════════════════════════════════════════════
-#  COMMENT VIEWS
-# ═══════════════════════════════════════════════════════════
-
-@login_required(login_url="accounts:login")
-def comment_list(request):
-    """
-    Moderation queue: all comments on the current user's posts.
-    Supports ?status=pending|approved|all filter.
-    URL name: blog:comment_list
-    """
-    status_filter = request.GET.get("status", "pending")
-    comments = Comment.objects.filter(post__author=request.user).order_by("-created_at")
-
-    if status_filter == "pending":
-        comments = comments.filter(is_approved=False)
-    elif status_filter == "approved":
-        comments = comments.filter(is_approved=True)
-
-    page = paginate(comments, request, per_page=15)
-    return render(request, "blog/comment_list.html", {
-        "comments":      page,
-        "status_filter": status_filter,
-        "pending_count": Comment.objects.filter(
-            post__author=request.user, is_approved=False
-        ).count(),
-    })
-
-
-@login_required(login_url="accounts:login")
-def approve_comment(request, pk):
-    """
-    Approve a pending comment.
-    URL name: blog:approve_comment  (pk)
-    """
-    comment = get_object_or_404(Comment, pk=pk, post__author=request.user)
-    comment.is_approved = True
-    comment.save(update_fields=["is_approved"])
-    messages.success(request, "Comment approved.")
-    return redirect("blog:comment_list")
-
-
-@login_required(login_url="accounts:login")
-def delete_comment(request, pk):
-    """
-    Delete a comment (POST only).
-    URL name: blog:delete_comment  (pk)
-    """
-    comment = get_object_or_404(Comment, pk=pk, post__author=request.user)
-    comment.delete()
-    messages.success(request, "Comment deleted.")
-    return redirect("blog:comment_list")
-
-
-# ═══════════════════════════════════════════════════════════
 #  LIKE VIEW  (AJAX-friendly)
 # ═══════════════════════════════════════════════════════════
 
@@ -1322,3 +1263,153 @@ def _build_suggestions(query):
 
     return sorted(suggestions)[:5]
 
+
+
+# ─────────────────────────────────────────────
+#  Comment list / moderation queue
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def comment_list(request):
+    """
+    Paginated moderation queue for comments on the author's posts.
+
+    Supports:
+      ?q=        search by comment text or commenter name / email
+      ?status=   'pending' | 'approved' | '' (all)
+      ?page=     pagination
+    """
+    base = Comment.objects.filter(
+        post__author=request.user
+    ).select_related("post", "author").order_by("-created_at")
+
+    # ── Search ───────────────────────────────
+    query = request.GET.get("q", "").strip()
+    if query:
+        base = base.filter(
+            Q(body__icontains=query)  |
+            Q(name__icontains=query)  |
+            Q(email__icontains=query)
+        )
+
+    # ── Status filter ────────────────────────
+    status_filter = request.GET.get("status", "").strip()
+    if status_filter == "pending":
+        base = base.filter(is_approved=False)
+    elif status_filter == "approved":
+        base = base.filter(is_approved=True)
+
+    # ── Stat card counts ─────────────────────
+    all_comments   = Comment.objects.filter(post__author=request.user)
+    total_count    = all_comments.count()
+    pending_count  = all_comments.filter(is_approved=False).count()
+    approved_count = all_comments.filter(is_approved=True).count()
+    today_count    = all_comments.filter(
+        created_at__date=timezone.now().date()
+    ).count()
+
+    # ── Paginate ─────────────────────────────
+    comments = _paginate(base, request, per_page=15)
+
+    return render(request, "blog/comment_list.html", {
+        "comments":      comments,
+        "query":         query,
+        "status_filter": status_filter,
+        "total_count":   total_count,
+        "pending_count": pending_count,
+        "approved_count":approved_count,
+        "today_count":   today_count,
+    })
+
+
+# ─────────────────────────────────────────────
+#  Approve single comment
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def approve_comment(request, pk):
+    """
+    Approve a single pending comment.
+    Only accepts POST. Redirects back to the comment list.
+    """
+    if request.method != "POST":
+        return redirect("blog:comment_list")
+
+    comment = get_object_or_404(
+        Comment, pk=pk, post__author=request.user
+    )
+
+    if comment.is_approved:
+        messages.info(request, "This comment is already approved.")
+    else:
+        comment.is_approved = True
+        comment.is_read     = True
+        comment.save(update_fields=["is_approved", "is_read"])
+        messages.success(
+            request,
+            f'Comment by {comment.name} on "{comment.post.title}" approved.'
+        )
+
+    # Preserve the current filter/page when redirecting back
+    status = request.POST.get("status_filter", "")
+    query  = request.POST.get("query", "")
+    url    = f"{request.build_absolute_uri('/')[:-1]}?status={status}&q={query}" if status or query else ""
+    return redirect(f"{request.META.get('HTTP_REFERER', '')}") or redirect("blog:comment_list")
+
+
+# ─────────────────────────────────────────────
+#  Bulk approve all pending comments
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def approve_all_comments(request):
+    """
+    Approve every pending comment on the author's posts in one go.
+    Only accepts POST.
+    """
+    if request.method != "POST":
+        return redirect("blog:comment_list")
+
+    updated = Comment.objects.filter(
+        post__author=request.user,
+        is_approved=False,
+    ).update(is_approved=True, is_read=True)
+
+    if updated:
+        messages.success(
+            request,
+            f"{updated} comment{' was' if updated == 1 else 's were'} approved."
+        )
+    else:
+        messages.info(request, "No pending comments to approve.")
+
+    return redirect("blog:comment_list")
+
+
+# ─────────────────────────────────────────────
+#  Delete comment
+# ─────────────────────────────────────────────
+@login_required(login_url="accounts:login")
+def delete_comment(request, pk):
+    """
+    Permanently delete a comment.
+    Only accepts POST to prevent accidental GET-based deletion.
+    """
+    if request.method != "POST":
+        return redirect("blog:comment_list")
+
+    comment = get_object_or_404(
+        Comment, pk=pk, post__author=request.user
+    )
+
+    post_title   = comment.post.title
+    author_name  = comment.name
+    comment.delete()
+
+    messages.success(
+        request,
+        f'Comment by {author_name} on "{post_title}" deleted.'
+    )
+
+    # Return to wherever the user came from (preserves filter state)
+    referer = request.META.get("HTTP_REFERER")
+    if referer:
+        return redirect(referer)
+    return redirect("blog:comment_list")

@@ -116,5 +116,6 @@ urlpatterns = [
     path("audience/subscriber/<int:pk>/remove/",
      views.remove_subscriber,
      name="remove_subscriber"),
+    path("comments/approve-all/", views.approve_all_comments, name="approve_all_comments"),
 
 ]
