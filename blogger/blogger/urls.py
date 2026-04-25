@@ -19,11 +19,16 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from blog.views import HomeView
+from . import views as project_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("accounts/", include("accounts.urls", namespace="accounts")),
     path('blog/',     include('blog.urls',     namespace='blog')),
     path("", HomeView.as_view(), name="home"),
+    # ── Legal pages ────────────────────────────
+    path("terms/", project_views.terms, name="terms"),  # ← add
+    path("privacy/", project_views.privacy, name="privacy"),  # ← add
+
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

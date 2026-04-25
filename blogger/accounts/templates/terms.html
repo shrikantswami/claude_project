@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Terms of Service – Blogger</title>
+  <meta name="description" content="Read Blogger's Terms of Service to understand your rights and responsibilities when using our platform." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f7;
+      color: #111;
+    }
+
+    /* ── Navigation ── */
+    .nav {
+      background: #fff; border-bottom: 1px solid #e8e8e8;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px; height: 56px;
+      position: sticky; top: 0; z-index: 20;
+    }
+    .nav-logo { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: #111; text-decoration: none; }
+    .nav-icon  { width: 26px; height: 26px; background: #7F77DD; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+    .nav-icon svg { width: 13px; height: 13px; fill: none; stroke: #fff; stroke-width: 2; }
+    .nav-links { display: flex; align-items: center; gap: 6px; }
+    .nav-link  { font-size: 13px; color: #666; text-decoration: none; padding: 6px 10px; border-radius: 7px; transition: background .15s; }
+    .nav-link:hover { background: #f5f5f5; color: #111; }
+    .nav-cta   { font-size: 13px; padding: 7px 14px; border-radius: 7px; background: #7F77DD; color: #fff; text-decoration: none; transition: background .15s; }
+    .nav-cta:hover { background: #534AB7; }
+
+    /* ── Hero ── */
+    .page-hero { background: #1a1a2e; padding: 48px 28px 40px; text-align: center; }
+    .hero-label {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 600; color: #AFA9EC;
+      letter-spacing: .08em; text-transform: uppercase;
+      margin-bottom: 12px;
+      background: rgba(127,119,221,.15); padding: 4px 12px;
+      border-radius: 20px; border: 1px solid rgba(127,119,221,.25);
+    }
+    .hero-label svg { width: 12px; height: 12px; fill: none; stroke: #AFA9EC; stroke-width: 2; }
+    .hero-title { font-size: 30px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .hero-sub   { font-size: 14px; color: rgba(255,255,255,.5); }
+
+    /* ── Page wrapper ── */
+    .page-wrap { max-width: 960px; margin: 0 auto; padding: 36px 24px 56px; }
+
+    /* ── Two-column layout ── */
+    .layout { display: grid; grid-template-columns: 220px 1fr; gap: 32px; }
+
+    /* ── Sticky TOC sidebar ── */
+    .toc-sticky { position: sticky; top: 80px; height: fit-content; }
+    .toc-card   { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .toc-title  { font-size: 11px; font-weight: 600; color: #aaa; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 12px; }
+    .toc-link   { display: block; font-size: 13px; color: #555; text-decoration: none; padding: 6px 0; border-bottom: 1px solid #f8f8f8; transition: color .15s; }
+    .toc-link:last-child { border-bottom: none; }
+    .toc-link:hover  { color: #7F77DD; }
+    .toc-link.active { color: #7F77DD; font-weight: 500; }
+
+    .meta-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 14px; }
+    .meta-row  { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid #f8f8f8; }
+    .meta-row:last-child { border-bottom: none; }
+    .meta-label{ color: #aaa; }
+    .meta-val  { color: #111; font-weight: 500; }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; color: #888; text-decoration: none;
+      margin-bottom: 14px; transition: color .15s;
+    }
+    .back-link:hover { color: #7F77DD; }
+    .back-link svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    /* ── Article ── */
+    .article { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 32px 36px; }
+
+    .article-intro {
+      font-size: 14px; color: #666; line-height: 1.75;
+      padding: 14px 18px;
+      background: #EEEDFE;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 28px;
+      border-left: 3px solid #7F77DD;
+    }
+
+    /* ── Sections ── */
+    .section { margin-bottom: 32px; padding-bottom: 32px; border-bottom: 1px solid #f5f5f5; }
+    .section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .section-num   { font-size: 11px; font-weight: 600; color: #7F77DD; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
+    .section-title { font-size: 18px; font-weight: 700; color: #111; margin-bottom: 12px; }
+    .section-body  { font-size: 14px; color: #555; line-height: 1.8; }
+    .section-body p { margin-bottom: 10px; }
+    .section-body p:last-child { margin-bottom: 0; }
+    .section-body ul { margin: 8px 0 10px 20px; }
+    .section-body ol { margin: 8px 0 10px 20px; }
+    .section-body li { margin-bottom: 5px; }
+    .section-body a  { color: #7F77DD; text-decoration: underline; }
+    .section-body strong { font-weight: 600; color: #111; }
+
+    .highlight-box {
+      background: #EEEDFE;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      margin: 14px 0;
+      font-size: 13px;
+      color: #3C3489;
+      border-left: 3px solid #7F77DD;
+      line-height: 1.65;
+    }
+
+    .warning-box {
+      background: #FAEEDA;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 16px;
+      margin: 14px 0;
+      font-size: 13px;
+      color: #633806;
+      border-left: 3px solid #EF9F27;
+      line-height: 1.65;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      border-top: 1px solid #e8e8e8; background: #fff;
+      padding: 22px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .footer-brand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #111; text-decoration: none; }
+    .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+    .footer-link  { font-size: 13px; color: #888; text-decoration: none; }
+    .footer-link:hover { color: #111; }
+    .footer-copy  { font-size: 12px; color: #bbb; }
+
+    /* ── Responsive ── */
+    @media (max-width: 760px) {
+      .layout      { grid-template-columns: 1fr; }
+      .toc-sticky  { position: static; }
+      .article     { padding: 22px 20px; }
+      .page-hero   { padding: 32px 20px 28px; }
+      .page-wrap   { padding: 20px 16px 40px; }
+      .nav         { padding: 0 16px; }
+      .nav-links .nav-link { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="nav">
+  <a href="{% url 'home' %}" class="nav-logo">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    Blogger
+  </a>
+  <div class="nav-links">
+    <a href="{% url 'home' %}"      class="nav-link">Home</a>
+    <a href="{% url 'blog:post_list' %}" class="nav-link">All posts</a>
+    <a href="{% url 'privacy' %}"   class="nav-link">Privacy Policy</a>
+    {% if request.user.is_authenticated %}
+      <a href="{% url 'accounts:dashboard' %}" class="nav-cta">Dashboard</a>
+    {% else %}
+      <a href="{% url 'accounts:login' %}"    class="nav-link">Sign in</a>
+      <a href="{% url 'accounts:register' %}" class="nav-cta">Get started</a>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="page-hero">
+  <div class="hero-label">
+    <svg viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+    Legal
+  </div>
+  <h1 class="hero-title">Terms of Service</h1>
+  <p class="hero-sub">Last updated {{ last_updated }} &middot; Effective immediately</p>
+</div>
+
+<!-- ── Main content ── -->
+<div class="page-wrap">
+  <div class="layout">
+
+    <!-- Sticky sidebar TOC -->
+    <aside class="toc-sticky">
+
+      <a href="{% url 'home' %}" class="back-link">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Back to home
+      </a>
+
+      <div class="toc-card">
+        <div class="toc-title">Contents</div>
+        <a href="#acceptance"  class="toc-link" onclick="setActive(this)">1. Acceptance of terms</a>
+        <a href="#accounts"    class="toc-link" onclick="setActive(this)">2. Account registration</a>
+        <a href="#content"     class="toc-link" onclick="setActive(this)">3. Content &amp; conduct</a>
+        <a href="#ip"          class="toc-link" onclick="setActive(this)">4. Intellectual property</a>
+        <a href="#privacy"     class="toc-link" onclick="setActive(this)">5. Privacy &amp; data</a>
+        <a href="#payments"    class="toc-link" onclick="setActive(this)">6. Payments &amp; plans</a>
+        <a href="#termination" class="toc-link" onclick="setActive(this)">7. Termination</a>
+        <a href="#disclaimers" class="toc-link" onclick="setActive(this)">8. Disclaimers</a>
+        <a href="#liability"   class="toc-link" onclick="setActive(this)">9. Limitation of liability</a>
+        <a href="#law"         class="toc-link" onclick="setActive(this)">10. Governing law</a>
+        <a href="#changes"     class="toc-link" onclick="setActive(this)">11. Changes to terms</a>
+        <a href="#contact"     class="toc-link" onclick="setActive(this)">12. Contact us</a>
+      </div>
+
+      <div class="meta-card">
+        <div class="meta-row">
+          <span class="meta-label">Version</span>
+          <span class="meta-val">{{ version }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Updated</span>
+          <span class="meta-val">{{ last_updated }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Effective</span>
+          <span class="meta-val">Immediately</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Jurisdiction</span>
+          <span class="meta-val">{{ jurisdiction }}</span>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Article body -->
+    <article class="article">
+
+      <div class="article-intro">
+        Please read these Terms of Service carefully before using Blogger. By accessing or using our platform, you confirm that you have read, understood, and agree to be legally bound by these terms. If you do not agree, please do not use Blogger.
+      </div>
+
+      <!-- 1. Acceptance -->
+      <div class="section" id="acceptance">
+        <div class="section-num">01</div>
+        <h2 class="section-title">Acceptance of terms</h2>
+        <div class="section-body">
+          <p>By accessing or using Blogger ("the Service," "we," "us," or "our"), you confirm that you are at least 13 years of age and that you have read, understood, and agree to be legally bound by these Terms of Service and our <a href="{% url 'privacy' %}">Privacy Policy</a>.</p>
+          <p>If you are using the Service on behalf of a company or other legal entity, you represent and warrant that you have the authority to bind that entity to these Terms.</p>
+          <div class="highlight-box">
+            These Terms apply to all visitors, registered users, authors, and anyone else who accesses or uses Blogger in any way.
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Accounts -->
+      <div class="section" id="accounts">
+        <div class="section-num">02</div>
+        <h2 class="section-title">Account registration</h2>
+        <div class="section-body">
+          <p>To publish content or access certain features, you must create an account. When registering, you agree to:</p>
+          <ul>
+            <li>Provide accurate, current, and complete information</li>
+            <li>Maintain and promptly update your account details</li>
+            <li>Keep your password secure and confidential</li>
+            <li>Accept responsibility for all activity that occurs under your account</li>
+            <li>Notify us immediately of any unauthorised use of your account</li>
+          </ul>
+          <p>We reserve the right to refuse registration, suspend, or terminate any account at our sole discretion, including for violations of these Terms.</p>
+          <p>You may not create an account on behalf of someone else without their express consent, or use another person's account without authorisation.</p>
+        </div>
+      </div>
+
+      <!-- 3. Content & Conduct -->
+      <div class="section" id="content">
+        <div class="section-num">03</div>
+        <h2 class="section-title">Content &amp; conduct</h2>
+        <div class="section-body">
+          <p>You retain full ownership of any content you create and publish on Blogger ("User Content"). By posting content, you grant Blogger a non-exclusive, worldwide, royalty-free licence to host, store, display, reproduce, and distribute your content solely for the purpose of operating the Service.</p>
+          <p>You are solely responsible for your User Content. You agree <strong>not</strong> to post content that:</p>
+          <ul>
+            <li>Is unlawful, harmful, threatening, abusive, harassing, or defamatory</li>
+            <li>Infringes any copyright, trademark, or other intellectual property right</li>
+            <li>Contains malware, viruses, or other malicious code</li>
+            <li>Constitutes unsolicited advertising or spam</li>
+            <li>Impersonates any person or entity</li>
+            <li>Violates any applicable local, national, or international law</li>
+          </ul>
+          <p>We reserve the right — but not the obligation — to review, remove, or restrict any User Content at our discretion and without prior notice.</p>
+        </div>
+      </div>
+
+      <!-- 4. IP -->
+      <div class="section" id="ip">
+        <div class="section-num">04</div>
+        <h2 class="section-title">Intellectual property</h2>
+        <div class="section-body">
+          <p>The Blogger platform, including its design, source code, logos, and all content created by us, is protected by copyright and other intellectual property laws. All rights not expressly granted are reserved.</p>
+          <p>You may not copy, modify, distribute, sell, or lease any part of the Service without our prior written consent.</p>
+          <p>The name "Blogger" and our logo are our trademarks. You may not use them without our prior written permission.</p>
+          <div class="highlight-box">
+            Your posts remain your intellectual property. We do not claim ownership over any content you create and publish on the platform.
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Privacy -->
+      <div class="section" id="privacy">
+        <div class="section-num">05</div>
+        <h2 class="section-title">Privacy &amp; data</h2>
+        <div class="section-body">
+          <p>Your use of Blogger is also governed by our <a href="{% url 'privacy' %}">Privacy Policy</a>, which is incorporated into these Terms by reference. By using the Service, you consent to the collection and use of your data as described in that policy.</p>
+          <p>We implement industry-standard security measures to protect your personal data. However, no method of transmission over the internet is 100% secure, and we cannot guarantee absolute security.</p>
+          <p>You have the right to access, correct, or delete your personal data at any time by visiting your account settings or contacting us directly.</p>
+        </div>
+      </div>
+
+      <!-- 6. Payments -->
+      <div class="section" id="payments">
+        <div class="section-num">06</div>
+        <h2 class="section-title">Payments &amp; plans</h2>
+        <div class="section-body">
+          <p>Blogger currently offers a free plan for all users. If we introduce paid plans in the future, the following terms will apply:</p>
+          <ul>
+            <li>All fees are stated in the applicable currency at the time of purchase</li>
+            <li>Subscriptions renew automatically unless cancelled before the renewal date</li>
+            <li>Refunds are handled on a case-by-case basis at our discretion</li>
+            <li>We reserve the right to change our pricing with 30 days' notice</li>
+          </ul>
+          <div class="warning-box">
+            If we introduce charges, we will notify all existing users in advance and provide an opportunity to review the new terms before any fees apply.
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Termination -->
+      <div class="section" id="termination">
+        <div class="section-num">07</div>
+        <h2 class="section-title">Termination</h2>
+        <div class="section-body">
+          <p>You may delete your account at any time by visiting your account settings. Upon deletion, your published posts will be removed from public view within a reasonable period.</p>
+          <p>We may suspend or terminate your access to the Service immediately, without prior notice, if we believe you have violated these Terms or if we are required to do so by law.</p>
+          <p>Upon termination, all licences and rights granted to you under these Terms will immediately cease. Provisions that by their nature should survive termination — including ownership, disclaimers, indemnity, and limitation of liability — will continue to apply.</p>
+        </div>
+      </div>
+
+      <!-- 8. Disclaimers -->
+      <div class="section" id="disclaimers">
+        <div class="section-num">08</div>
+        <h2 class="section-title">Disclaimers</h2>
+        <div class="section-body">
+          <p>The Service is provided on an "as is" and "as available" basis without warranties of any kind, either express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement.</p>
+          <p>We do not warrant that:</p>
+          <ul>
+            <li>The Service will be uninterrupted, secure, or error-free</li>
+            <li>Any content on the platform is accurate, complete, or up to date</li>
+            <li>The Service will meet your specific requirements</li>
+          </ul>
+          <p>Content published by authors on Blogger reflects their personal views only and does not represent our opinions or endorsements.</p>
+        </div>
+      </div>
+
+      <!-- 9. Limitation of liability -->
+      <div class="section" id="liability">
+        <div class="section-num">09</div>
+        <h2 class="section-title">Limitation of liability</h2>
+        <div class="section-body">
+          <p>To the fullest extent permitted by applicable law, Blogger and its directors, employees, and partners shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of — or inability to use — the Service.</p>
+          <p>Our total liability to you for any claim arising from or relating to these Terms or the Service shall not exceed the greater of (a) the amount you paid us in the 12 months prior to the claim, or (b) £100 (or the local currency equivalent).</p>
+        </div>
+      </div>
+
+      <!-- 10. Governing law -->
+      <div class="section" id="law">
+        <div class="section-num">10</div>
+        <h2 class="section-title">Governing law</h2>
+        <div class="section-body">
+          <p>These Terms are governed by and construed in accordance with the laws of <strong>{{ jurisdiction }}</strong>, without regard to its conflict of law provisions.</p>
+          <p>Any disputes arising under or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts of {{ jurisdiction }}, unless mandatory consumer protection laws in your country require otherwise.</p>
+        </div>
+      </div>
+
+      <!-- 11. Changes -->
+      <div class="section" id="changes">
+        <div class="section-num">11</div>
+        <h2 class="section-title">Changes to these terms</h2>
+        <div class="section-body">
+          <p>We may update these Terms from time to time. When we make material changes, we will notify you by email or by posting a prominent notice on the platform at least 14 days before the changes take effect.</p>
+          <p>Your continued use of the Service after any changes become effective constitutes your acceptance of the revised Terms. If you do not agree to the new Terms, please stop using the Service and delete your account.</p>
+          <div class="highlight-box">
+            We always keep a version history of our Terms. You can contact us to request a copy of any previous version.
+          </div>
+        </div>
+      </div>
+
+      <!-- 12. Contact -->
+      <div class="section" id="contact">
+        <div class="section-num">12</div>
+        <h2 class="section-title">Contact us</h2>
+        <div class="section-body">
+          <p>If you have any questions, concerns, or feedback about these Terms of Service, please contact us:</p>
+          <ul>
+            <li><strong>Email:</strong> <a href="mailto:{{ contact_email }}">{{ contact_email }}</a></li>
+            <li><strong>Website:</strong> <a href="{% url 'home' %}">{{ site_url }}</a></li>
+          </ul>
+          <p>We aim to respond to all enquiries within 5 business days.</p>
+        </div>
+      </div>
+
+    </article>
+
+  </div>
+</div>
+
+<!-- ── Footer ── -->
+<footer class="footer">
+  <a href="{% url 'home' %}" class="footer-brand">
+    <div class="nav-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    Blogger
+  </a>
+  <div class="footer-links">
+    <a href="{% url 'home' %}"          class="footer-link">Home</a>
+    <a href="{% url 'blog:post_list' %}" class="footer-link">All posts</a>
+    <a href="{% url 'privacy' %}"        class="footer-link">Privacy Policy</a>
+    <a href="{% url 'terms' %}"          class="footer-link" style="color:#7F77DD">Terms of Service</a>
+    {% if request.user.is_authenticated %}
+      <a href="{% url 'accounts:dashboard' %}" class="footer-link">Dashboard</a>
+    {% else %}
+      <a href="{% url 'accounts:login' %}" class="footer-link">Sign in</a>
+    {% endif %}
+  </div>
+  <div class="footer-copy">&copy; {% now "Y" %} Blogger. All rights reserved.</div>
+</footer>
+
+<script>
+  /* Highlight active TOC item on click */
+  function setActive(el) {
+    document.querySelectorAll('.toc-link').forEach(function(l) { l.classList.remove('active'); });
+    el.classList.add('active');
+  }
+
+  /* Highlight TOC item on scroll */
+  var sections  = document.querySelectorAll('.section[id]');
+  var tocLinks  = document.querySelectorAll('.toc-link');
+
+  window.addEventListener('scroll', function () {
+    var scrollY = window.scrollY + 100;
+    var current = '';
+    sections.forEach(function (s) {
+      if (s.offsetTop <= scrollY) current = s.id;
+    });
+    tocLinks.forEach(function (l) {
+      var href = l.getAttribute('href').replace('#', '');
+      l.classList.toggle('active', href === current);
+    });
+  }, { passive: true });
+</script>
+
+</body>
+</html>
