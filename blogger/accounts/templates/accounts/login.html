@@ -337,6 +337,8 @@
       <span>Blogger</span>
     </div>
 
+
+
     <div class="form-header">
       <h1>Welcome back</h1>
       <p>Sign in to your account to continue</p>
@@ -459,7 +461,14 @@
     <div class="footer-text">
       Don't have an account? <a href="{% url 'accounts:register' %}">Create one</a>
     </div>
-
+<div class="footer-text" style="margin-top: 10px;">
+  <a href="{% url 'home' %}" style="display:inline-flex;align-items:center;gap:5px;color:#888;text-decoration:none;font-size:13px">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    Back to home
+  </a>
+</div>
   </div>
 </div>
 
