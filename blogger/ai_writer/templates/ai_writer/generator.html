@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Post Generator – Blogger</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #111; }
+
+    /* ── Sidebar ── */
+    .layout  { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; background: #1a1a2e; display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    .sb-logo    { display: flex; align-items: center; gap: 10px; padding: 20px 18px 16px; }
+    .sb-icon    { width: 32px; height: 32px; background: #7F77DD; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .sb-icon svg{ width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; }
+    .sb-brand   { font-size: 16px; font-weight: 600; color: #fff; }
+    .sb-divider { height: 1px; background: rgba(255,255,255,.08); margin: 0 18px; }
+    .sb-section { padding: 12px 18px 4px; font-size: 10px; letter-spacing: .08em; color: rgba(255,255,255,.3); text-transform: uppercase; font-weight: 600; }
+    .sb-link    { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; margin: 1px 6px; font-size: 13px; color: rgba(255,255,255,.6); text-decoration: none; transition: background .15s; }
+    .sb-link svg{ width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+    .sb-link:hover   { background: rgba(255,255,255,.07); color: rgba(255,255,255,.85); }
+    .sb-link.active  { background: rgba(127,119,221,.25); color: #AFA9EC; }
+    .sb-link.active svg { stroke: #AFA9EC; }
+    .sb-spacer  { flex: 1; }
+    .sb-user    { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,.07); }
+    .sb-avatar  { width: 30px; height: 30px; border-radius: 50%; background: #7F77DD; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }
+    .sb-uname   { font-size: 13px; color: rgba(255,255,255,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sb-urole   { font-size: 11px; color: rgba(255,255,255,.35); }
+
+    /* ── Main ── */
+    .main    { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar  { background: #fff; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; flex-shrink: 0; position: sticky; top: 0; z-index: 10; }
+    .topbar-title { font-size: 16px; font-weight: 600; color: #111; }
+    .topbar-sub   { font-size: 12px; color: #888; }
+    .ai-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 5px 13px; border-radius: 20px; background: #EEEDFE; color: #534AB7; font-weight: 600; }
+    .ai-badge svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .content { padding: 28px 24px; flex: 1; }
+
+    /* ── Alert ── */
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+    .alert-error   { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+
+    /* ── Two-column layout ── */
+    .two-col { display: grid; grid-template-columns: 380px 1fr; gap: 24px; align-items: start; }
+
+    /* ── Form card ── */
+    .form-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 22px; }
+    .form-card-title { font-size: 14px; font-weight: 600; color: #111; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+    .form-card-title svg { width: 15px; height: 15px; fill: none; stroke: #7F77DD; stroke-width: 2; }
+
+    /* ── Form fields ── */
+    .field-group  { margin-bottom: 16px; }
+    .field-label  { display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 6px; }
+    .field-hint   { font-size: 11px; color: #bbb; margin-top: 4px; }
+    .field-input  { width: 100%; height: 38px; padding: 0 11px; border: 1px solid #e2e2e2; border-radius: 8px; background: #fafafa; color: #111; font-size: 13px; font-family: inherit; outline: none; transition: border-color .15s; }
+    .field-input:focus  { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,.1); background: #fff; }
+    .field-select { width: 100%; height: 38px; padding: 0 11px; border: 1px solid #e2e2e2; border-radius: 8px; background: #fafafa; color: #111; font-size: 13px; font-family: inherit; outline: none; }
+    .field-select:focus { border-color: #7F77DD; }
+    .field-textarea { width: 100%; padding: 10px 11px; border: 1px solid #e2e2e2; border-radius: 8px; background: #fafafa; color: #111; font-size: 13px; font-family: inherit; outline: none; resize: vertical; min-height: 80px; transition: border-color .15s; }
+    .field-textarea:focus { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,.1); background: #fff; }
+
+    /* ── Option buttons (tone, length, etc.) ── */
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .option-btn   { padding: 8px 12px; border: 1px solid #e2e2e2; border-radius: 8px; background: #fafafa; font-size: 12px; color: #555; cursor: pointer; font-family: inherit; text-align: center; transition: all .15s; }
+    .option-btn:hover             { background: #f0f0f0; border-color: #d0d0d0; }
+    .option-btn.selected          { background: #EEEDFE; border-color: #AFA9EC; color: #534AB7; font-weight: 600; }
+    input[type="radio"].opt-radio { display: none; }
+
+    /* ── Generate button ── */
+    .generate-btn {
+      width: 100%; height: 46px;
+      background: #7F77DD; border: none; border-radius: 10px;
+      color: #fff; font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 18px; transition: background .15s;
+    }
+    .generate-btn:hover    { background: #534AB7; }
+    .generate-btn:disabled { opacity: .65; cursor: not-allowed; }
+    .generate-btn svg { width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; }
+
+    /* ── Info panel (right side) ── */
+    .info-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 22px; margin-bottom: 16px; }
+    .info-card:last-child { margin-bottom: 0; }
+    .info-title { font-size: 14px; font-weight: 600; color: #111; margin-bottom: 12px; }
+    .info-step  { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+    .info-step:last-child { margin-bottom: 0; }
+    .step-num   { width: 26px; height: 26px; border-radius: 50%; background: #EEEDFE; color: #534AB7; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .step-text  { font-size: 13px; color: #555; line-height: 1.5; }
+    .step-text strong { font-weight: 600; color: #111; }
+    .tip-box    { background: #EEEDFE; border-radius: 8px; padding: 12px 14px; font-size: 13px; color: #534AB7; line-height: 1.55; }
+    .tip-box svg{ width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; vertical-align: -2px; margin-right: 5px; }
+    .recent-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+    .recent-item:last-child { border-bottom: none; }
+    .recent-title { color: #111; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+    .recent-status { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+    .status-generated { background: #E1F5EE; color: #0F6E56; }
+    .status-failed    { background: #fef2f2; color: #991b1b; }
+    .status-draft     { background: #F1EFE8; color: #5F5E5A; }
+    .status-published { background: #EEEDFE; color: #534AB7; }
+
+    /* ── Mobile ── */
+    .ham-btn { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+    .ham-btn svg { width: 20px; height: 20px; stroke: #555; fill: none; stroke-width: 2; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    @media (max-width: 680px) { .sidebar { display: none; } .ham-btn { display: block; } .content { padding: 16px; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <span class="sb-brand">Blogger</span>
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-section">Main</div>
+    <a href="{% url 'accounts:dashboard' %}" class="sb-link"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a href="{% url 'blog:post_list' %}"     class="sb-link"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>My posts</a>
+    <a href="{% url 'blog:draft_list' %}"    class="sb-link"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Drafts</a>
+    <div class="sb-section">AI Tools</div>
+    <a href="{% url 'ai_writer:generator' %}" class="sb-link active"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Post generator</a>
+    <a href="{% url 'ai_writer:list' %}"      class="sb-link"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Generated posts</a>
+    <div class="sb-spacer"></div>
+    <form method="POST" action="{% url 'accounts:logout' %}" style="margin:0 6px 8px">{% csrf_token %}
+      <button type="submit" class="sb-link" style="width:100%;background:none;border:none;cursor:pointer;font-family:inherit">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out
+      </button>
+    </form>
+    <div class="sb-user">
+      <div class="sb-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+      <div><div class="sb-uname">{{ request.user.get_full_name|default:request.user.username }}</div><div class="sb-urole">{{ request.user.email }}</div></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="ham-btn" onclick="document.getElementById('sidebar').style.display='flex'"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div><div class="topbar-title">AI Post Generator</div><div class="topbar-sub">Powered by Claude Sonnet</div></div>
+      </div>
+      <div class="ai-badge"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Claude AI</div>
+    </div>
+
+    <div class="content">
+      {% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags }}">{{ m }}</div>{% endfor %}{% endif %}
+
+      <div class="two-col">
+
+        <!-- ── Generation form ── -->
+        <form method="POST" action="{% url 'ai_writer:generator' %}" id="gen-form">
+          {% csrf_token %}
+          <div class="form-card">
+            <div class="form-card-title">
+              <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              Post details
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="topic">Topic / Title *</label>
+              <input type="text" id="topic" name="topic" class="field-input"
+                     placeholder="e.g. Getting started with Django 5.2"
+                     value="{{ form_data.topic|default:'' }}" required autofocus />
+              <p class="field-hint">Be specific — the more detail, the better the output.</p>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Target audience</label>
+              <select name="audience" class="field-select">
+                {% for val, label in audience_choices %}
+                  <option value="{{ val }}" {% if form_data.audience == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Tone / style</label>
+              <div class="options-grid" id="tone-grid">
+                {% for val, label in tone_choices %}
+                  <label class="option-btn {% if form_data.tone == val or not form_data.tone and val == 'technical' %}selected{% endif %}">
+                    <input type="radio" name="tone" value="{{ val }}" class="opt-radio"
+                           {% if form_data.tone == val or not form_data.tone and val == 'technical' %}checked{% endif %} />
+                    {{ label }}
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Post length</label>
+              <div class="options-grid" id="length-grid">
+                {% for val, label in length_choices %}
+                  <label class="option-btn {% if form_data.length == val or not form_data.length and val == 'medium' %}selected{% endif %}">
+                    <input type="radio" name="length" value="{{ val }}" class="opt-radio"
+                           {% if form_data.length == val or not form_data.length and val == 'medium' %}checked{% endif %} />
+                    {{ label }}
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="key_points">Key points to cover <span style="font-weight:400;color:#bbb">(optional)</span></label>
+              <textarea id="key_points" name="key_points" class="field-textarea"
+                        placeholder="e.g. serializers, viewsets, authentication, pagination…">{{ form_data.key_points|default:'' }}</textarea>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="tags_input">Tags <span style="font-weight:400;color:#bbb">(optional)</span></label>
+              <input type="text" id="tags_input" name="tags_input" class="field-input"
+                     placeholder="Django, Python, REST API"
+                     value="{{ form_data.tags_input|default:'' }}" />
+              <p class="field-hint">Comma-separated. Claude will also suggest tags.</p>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Include code examples?</label>
+              <div class="options-grid">
+                <label class="option-btn {% if form_data.include_code != 'no' %}selected{% endif %}">
+                  <input type="radio" name="include_code" value="yes" class="opt-radio"
+                         {% if form_data.include_code != 'no' %}checked{% endif %} />Yes
+                </label>
+                <label class="option-btn {% if form_data.include_code == 'no' %}selected{% endif %}">
+                  <input type="radio" name="include_code" value="no" class="opt-radio"
+                         {% if form_data.include_code == 'no' %}checked{% endif %} />No
+                </label>
+              </div>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label" for="extra_instructions">Extra instructions <span style="font-weight:400;color:#bbb">(optional)</span></label>
+              <textarea id="extra_instructions" name="extra_instructions" class="field-textarea" rows="2"
+                        placeholder="e.g. Focus on performance tips. Mention Django 5.2 specifically.">{{ form_data.extra_instructions|default:'' }}</textarea>
+            </div>
+
+            <button type="submit" class="generate-btn" id="gen-btn">
+              <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Generate post with Claude
+            </button>
+          </div>
+        </form>
+
+        <!-- ── Right: how it works + recent ── -->
+        <div>
+          <div class="info-card">
+            <div class="info-title">How it works</div>
+            <div class="info-step">
+              <div class="step-num">1</div>
+              <div class="step-text"><strong>Fill in the details</strong> — topic, audience, tone, length and any key points you want covered.</div>
+            </div>
+            <div class="info-step">
+              <div class="step-num">2</div>
+              <div class="step-text"><strong>Claude generates</strong> a full blog post in Markdown — title, excerpt, structured sections, and code examples if requested.</div>
+            </div>
+            <div class="info-step">
+              <div class="step-num">3</div>
+              <div class="step-text"><strong>Review & edit</strong> the output inline. Make any tweaks you want before publishing.</div>
+            </div>
+            <div class="info-step">
+              <div class="step-num">4</div>
+              <div class="step-text"><strong>Push to blog</strong> — save as draft or publish directly. Tags are created automatically.</div>
+            </div>
+          </div>
+
+          <div class="info-card">
+            <div class="tip-box">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <strong>Tip:</strong> The more specific your topic and key points, the less editing you'll need. For example, instead of "Django" try "Django 5.2 facet filters — how to add them to your admin panel".
+            </div>
+          </div>
+
+          {% if recent_generated %}
+            <div class="info-card">
+              <div class="info-title">Recently generated</div>
+              {% for gp in recent_generated %}
+                <div class="recent-item">
+                  <a href="{% url 'ai_writer:review' gp.pk %}" class="recent-title" style="text-decoration:none">{{ gp.topic }}</a>
+                  <span class="recent-status status-{{ gp.status }}">{{ gp.get_status_display }}</span>
+                </div>
+              {% endfor %}
+              <div style="margin-top:10px">
+                <a href="{% url 'ai_writer:list' %}" style="font-size:12px;color:#7F77DD;text-decoration:none">View all generated posts →</a>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* Option button toggle for radio groups */
+  document.querySelectorAll('.options-grid').forEach(function(grid) {
+    grid.querySelectorAll('.option-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        grid.querySelectorAll('.option-btn').forEach(function(b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        var radio = btn.querySelector('input[type="radio"]');
+        if (radio) radio.checked = true;
+      });
+    });
+  });
+
+  /* Loading state on submit */
+  document.getElementById('gen-form').addEventListener('submit', function() {
+    var btn = document.getElementById('gen-btn');
+    btn.disabled    = true;
+    btn.innerHTML   = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="white" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Generating with Claude…';
+  });
+</script>
+</body>
+</html>

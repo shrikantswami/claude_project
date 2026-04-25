@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Review Generated Post – Blogger</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #111; }
+
+    /* ── Sidebar (shared) ── */
+    .layout  { display: flex; min-height: 100vh; }
+    .sidebar { width: 220px; background: #1a1a2e; display: flex; flex-direction: column; flex-shrink: 0; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+    .sb-logo    { display: flex; align-items: center; gap: 10px; padding: 20px 18px 16px; }
+    .sb-icon    { width: 32px; height: 32px; background: #7F77DD; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+    .sb-icon svg{ width: 16px; height: 16px; fill: none; stroke: #fff; stroke-width: 2; }
+    .sb-brand   { font-size: 16px; font-weight: 600; color: #fff; }
+    .sb-divider { height: 1px; background: rgba(255,255,255,.08); margin: 0 18px; }
+    .sb-section { padding: 12px 18px 4px; font-size: 10px; letter-spacing: .08em; color: rgba(255,255,255,.3); text-transform: uppercase; font-weight: 600; }
+    .sb-link    { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; margin: 1px 6px; font-size: 13px; color: rgba(255,255,255,.6); text-decoration: none; transition: background .15s; }
+    .sb-link svg{ width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+    .sb-link:hover   { background: rgba(255,255,255,.07); color: rgba(255,255,255,.85); }
+    .sb-link.active  { background: rgba(127,119,221,.25); color: #AFA9EC; }
+    .sb-link.active svg { stroke: #AFA9EC; }
+    .sb-spacer  { flex: 1; }
+    .sb-user    { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-top: 1px solid rgba(255,255,255,.07); }
+    .sb-avatar  { width: 30px; height: 30px; border-radius: 50%; background: #7F77DD; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }
+    .sb-uname   { font-size: 13px; color: rgba(255,255,255,.7); }
+    .sb-urole   { font-size: 11px; color: rgba(255,255,255,.35); }
+
+    /* ── Main ── */
+    .main    { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar  { background: #fff; border-bottom: 1px solid #e8e8e8; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; height: 56px; flex-shrink: 0; position: sticky; top: 0; z-index: 10; flex-wrap: wrap; gap: 8px; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .topbar-title{ font-size: 16px; font-weight: 600; color: #111; }
+    .topbar-sub  { font-size: 12px; color: #888; }
+    .topbar-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 7px 14px; border-radius: 7px; border: 1px solid #e2e2e2; background: #fafafa; color: #444; cursor: pointer; font-family: inherit; text-decoration: none; transition: background .15s; }
+    .btn:hover    { background: #f0f0f0; }
+    .btn svg      { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .btn.draft    { background: #fafafa; }
+    .btn.publish  { background: #1D9E75; border-color: #1D9E75; color: #fff; }
+    .btn.publish:hover { background: #0F6E56; }
+    .btn.regen    { background: #EEEDFE; border-color: #AFA9EC; color: #534AB7; }
+    .btn.regen:hover  { background: #CECBF6; }
+    .btn.danger   { color: #dc2626; border-color: #fca5a5; }
+    .btn.danger:hover { background: #fef2f2; }
+
+    .content { padding: 24px; flex: 1; }
+
+    /* Alert */
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+    .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+    .alert-error   { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+
+    /* ── Layout: editor + preview ── */
+    .review-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    /* ── Editor panel ── */
+    .editor-panel { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; overflow: hidden; }
+    .panel-header { padding: 14px 18px 12px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; justify-content: space-between; background: #fafafa; }
+    .panel-title  { font-size: 13px; font-weight: 600; color: #111; display: flex; align-items: center; gap: 6px; }
+    .panel-title svg { width: 13px; height: 13px; fill: none; stroke: #7F77DD; stroke-width: 2; }
+    .panel-body   { padding: 16px 18px; }
+
+    .field-group   { margin-bottom: 14px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .field-label   { display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 5px; }
+    .field-input   { width: 100%; height: 38px; padding: 0 11px; border: 1px solid #e2e2e2; border-radius: 8px; background: #fafafa; color: #111; font-size: 13px; font-family: inherit; outline: none; }
+    .field-input:focus  { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,.1); background: #fff; }
+    .field-textarea { width: 100%; padding: 10px 11px; border: 1px solid #e2e2e2; border-radius: 8px; background: #fafafa; color: #111; font-size: 13px; font-family: 'SFMono-Regular', Consolas, monospace; line-height: 1.7; outline: none; resize: vertical; }
+    .field-textarea:focus { border-color: #7F77DD; box-shadow: 0 0 0 3px rgba(127,119,221,.1); background: #fff; }
+    .word-count { font-size: 11px; color: #bbb; text-align: right; margin-top: 4px; }
+    .save-btn   { width: 100%; height: 38px; background: #7F77DD; border: none; border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 14px; }
+    .save-btn:hover { background: #534AB7; }
+
+    /* ── Preview panel ── */
+    .preview-panel { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; overflow: hidden; }
+    .preview-body  { padding: 24px; overflow-y: auto; max-height: calc(100vh - 160px); }
+
+    /* Rendered Markdown styles */
+    .preview-body h1   { font-size: 22px; font-weight: 700; color: #111; margin: 0 0 12px; line-height: 1.3; }
+    .preview-body h2   { font-size: 17px; font-weight: 700; color: #111; margin: 22px 0 8px; }
+    .preview-body h3   { font-size: 15px; font-weight: 700; color: #111; margin: 16px 0 6px; }
+    .preview-body p    { font-size: 14px; color: #444; line-height: 1.78; margin-bottom: 12px; }
+    .preview-body ul, .preview-body ol { margin: 6px 0 12px 20px; font-size: 14px; color: #444; }
+    .preview-body li   { margin-bottom: 4px; line-height: 1.6; }
+    .preview-body blockquote { border-left: 3px solid #7F77DD; padding: 4px 0 4px 16px; margin: 12px 0; color: #666; font-style: italic; font-size: 14px; }
+    .preview-body pre  { background: #1e1e2e; border-radius: 8px; padding: 14px 16px; margin: 12px 0; overflow-x: auto; }
+    .preview-body pre code { font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px; color: #AFA9EC; }
+    .preview-body code { font-family: 'SFMono-Regular', Consolas, monospace; background: #EEEDFE; color: #534AB7; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    .preview-body pre code { background: none; padding: 0; color: #AFA9EC; }
+    .preview-body hr   { border: none; border-top: 1px solid #e8e8e8; margin: 18px 0; }
+
+    .post-meta-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; }
+    .tag-pill { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: #EEEDFE; color: #534AB7; font-weight: 500; }
+    .meta-txt { font-size: 12px; color: #bbb; }
+
+    /* ── Status banners ── */
+    .status-banner { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .status-banner svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+    .banner-failed    { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .banner-pending   { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .banner-pushed    { background: #E1F5EE; border: 1px solid #9FE1CB; color: #0F6E56; }
+
+    /* ── Meta info card ── */
+    .meta-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+    .meta-row  { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; border-bottom: 1px solid #f5f5f5; }
+    .meta-row:last-child { border-bottom: none; }
+    .meta-label{ color: #aaa; }
+    .meta-val  { color: #111; font-weight: 500; }
+
+    /* ── Mobile ── */
+    .ham-btn { display: none; background: none; border: none; cursor: pointer; padding: 4px; }
+    .ham-btn svg { width: 20px; height: 20px; stroke: #555; fill: none; stroke-width: 2; }
+    @media (max-width: 900px) { .review-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 680px) { .sidebar { display: none; } .ham-btn { display: block; } .content { padding: 14px; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <span class="sb-brand">Blogger</span>
+    </div>
+    <div class="sb-divider"></div>
+    <div class="sb-section">Main</div>
+    <a href="{% url 'accounts:dashboard' %}" class="sb-link"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+    <a href="{% url 'blog:post_list' %}"     class="sb-link"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>My posts</a>
+    <div class="sb-section">AI Tools</div>
+    <a href="{% url 'ai_writer:generator' %}" class="sb-link"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Post generator</a>
+    <a href="{% url 'ai_writer:list' %}"      class="sb-link active"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>Generated posts</a>
+    <div class="sb-spacer"></div>
+    <form method="POST" action="{% url 'accounts:logout' %}" style="margin:0 6px 8px">{% csrf_token %}
+      <button type="submit" class="sb-link" style="width:100%;background:none;border:none;cursor:pointer;font-family:inherit">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Log out
+      </button>
+    </form>
+    <div class="sb-user">
+      <div class="sb-avatar">{{ request.user.first_name|first|upper }}{{ request.user.last_name|first|upper }}</div>
+      <div><div class="sb-uname">{{ request.user.get_full_name|default:request.user.username }}</div></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="ham-btn" onclick="document.getElementById('sidebar').style.display='flex'"><svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <div>
+          <div class="topbar-title">Review &amp; edit</div>
+          <div class="topbar-sub">{{ gp.topic|truncatechars:50 }}</div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <a href="{% url 'ai_writer:generator' %}" class="btn">
+          <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New post
+        </a>
+        {% if gp.status == 'generated' or gp.status == 'failed' %}
+          <form method="POST" action="{% url 'ai_writer:regenerate' gp.pk %}" style="display:inline">
+            {% csrf_token %}
+            <button type="submit" class="btn regen" onclick="return confirm('Regenerate? This will overwrite the current content.')">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Regenerate
+            </button>
+          </form>
+        {% endif %}
+        {% if gp.status == 'generated' and not gp.blog_post %}
+          <form method="POST" action="{% url 'ai_writer:push_to_blog' gp.pk %}" style="display:inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="draft" />
+            <button type="submit" class="btn draft">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Save as draft
+            </button>
+          </form>
+          <form method="POST" action="{% url 'ai_writer:push_to_blog' gp.pk %}" style="display:inline">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="publish" />
+            <button type="submit" class="btn publish">
+              <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Publish to blog
+            </button>
+          </form>
+        {% endif %}
+        {% if gp.blog_post %}
+          <a href="{% url 'blog:post_edit' gp.blog_post.pk %}" class="btn regen">Open in editor</a>
+        {% endif %}
+        <form method="POST" action="{% url 'ai_writer:delete' gp.pk %}" style="display:inline"
+              onsubmit="return confirm('Delete this generated post?')">
+          {% csrf_token %}
+          <button type="submit" class="btn danger">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="content">
+      {% if messages %}{% for m in messages %}<div class="alert alert-{{ m.tags }}">{{ m }}</div>{% endfor %}{% endif %}
+
+      <!-- Status banners -->
+      {% if gp.status == 'failed' %}
+        <div class="status-banner banner-failed">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Generation failed: {{ gp.error_msg|truncatechars:200 }}. Click "Regenerate" to try again.
+        </div>
+      {% elif gp.status == 'pending' %}
+        <div class="status-banner banner-pending">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Generation is in progress…
+        </div>
+      {% elif gp.blog_post %}
+        <div class="status-banner banner-pushed">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          This post has been pushed to the blog as
+          "<a href="{% url 'blog:post_edit' gp.blog_post.pk %}" style="color:#0F6E56">{{ gp.blog_post.title }}</a>".
+        </div>
+      {% endif %}
+
+      <div class="review-layout">
+
+        <!-- ── Left: editable fields ── -->
+        <form method="POST" action="{% url 'ai_writer:review' gp.pk %}" id="edit-form">
+          {% csrf_token %}
+
+          <div class="meta-card">
+            <div class="meta-row"><span class="meta-label">Topic</span><span class="meta-val">{{ gp.topic }}</span></div>
+            <div class="meta-row"><span class="meta-label">Tone</span><span class="meta-val">{{ gp.get_tone_display }}</span></div>
+            <div class="meta-row"><span class="meta-label">Length</span><span class="meta-val">{{ gp.get_length_display }}</span></div>
+            <div class="meta-row"><span class="meta-label">Word count</span><span class="meta-val" id="wc-display">{{ gp.word_count }}</span></div>
+            <div class="meta-row"><span class="meta-label">Generated</span><span class="meta-val">{{ gp.created_at|date:"M d, Y · g:i A" }}</span></div>
+            <div class="meta-row"><span class="meta-label">Model</span><span class="meta-val">{{ gp.model_used }}</span></div>
+          </div>
+
+          <div class="editor-panel">
+            <div class="panel-header">
+              <span class="panel-title">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit content
+              </span>
+              <span style="font-size:11px;color:#aaa">Changes auto-save on "Save edits"</span>
+            </div>
+            <div class="panel-body">
+
+              <div class="field-group">
+                <label class="field-label">Title</label>
+                <input type="text" name="title" class="field-input"
+                       value="{{ gp.generated_title }}"
+                       oninput="updatePreview()" />
+              </div>
+
+              <div class="field-group">
+                <label class="field-label">Excerpt</label>
+                <textarea name="excerpt" class="field-textarea" rows="2"
+                          oninput="updatePreview()">{{ gp.generated_excerpt }}</textarea>
+              </div>
+
+              <div class="field-group">
+                <label class="field-label">Tags</label>
+                <input type="text" name="tags" class="field-input"
+                       value="{{ gp.generated_tags }}"
+                       oninput="updatePreview()" />
+              </div>
+
+              <div class="field-group">
+                <label class="field-label">Content (Markdown)</label>
+                <textarea name="content" id="content-editor" class="field-textarea"
+                          rows="22" oninput="updatePreview(); updateWC()">{{ gp.generated_content }}</textarea>
+                <div class="word-count">Words: <strong id="wc-live">{{ gp.word_count }}</strong></div>
+              </div>
+
+              <button type="submit" class="save-btn">Save edits</button>
+            </div>
+          </div>
+        </form>
+
+        <!-- ── Right: live preview ── -->
+        <div class="preview-panel">
+          <div class="panel-header">
+            <span class="panel-title">
+              <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Live preview
+            </span>
+            <span style="font-size:11px;color:#aaa">Updates as you type</span>
+          </div>
+          <div class="preview-body" id="preview-body">
+            <div class="post-meta-bar" id="preview-tags">
+              {% for tag in gp.generated_tags.split %}
+                <span class="tag-pill">{{ tag|cut:"," }}</span>
+              {% endfor %}
+            </div>
+            <h1 id="preview-title">{{ gp.generated_title }}</h1>
+            <div class="post-meta-bar">
+              <span class="meta-txt">{{ gp.word_count }} words</span>
+              <span class="meta-txt">·</span>
+              <span class="meta-txt">Generated by Claude</span>
+            </div>
+            <div id="preview-content"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Marked.js for Markdown rendering -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script>
+  var contentEditor = document.getElementById('content-editor');
+  var previewDiv    = document.getElementById('preview-content');
+  var previewTitle  = document.getElementById('preview-title');
+  var previewTags   = document.getElementById('preview-tags');
+  var wcLive        = document.getElementById('wc-live');
+  var wcDisplay     = document.getElementById('wc-display');
+
+  /* Initial render */
+  function renderMarkdown(md) {
+    return marked.parse(md || '', { breaks: true, gfm: true });
+  }
+
+  function updatePreview() {
+    var titleInput   = document.querySelector('input[name="title"]');
+    var tagsInput    = document.querySelector('input[name="tags"]');
+    var contentInput = document.getElementById('content-editor');
+
+    if (previewTitle && titleInput)  previewTitle.textContent = titleInput.value;
+    if (previewDiv   && contentInput) previewDiv.innerHTML     = renderMarkdown(contentInput.value);
+
+    if (previewTags && tagsInput) {
+      var tags = tagsInput.value.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+      previewTags.innerHTML = tags.map(function(t) {
+        return '<span class="tag-pill">' + t + '</span>';
+      }).join('');
+    }
+  }
+
+  function updateWC() {
+    var words = (contentEditor.value || '').trim().split(/\s+/).filter(Boolean).length;
+    if (wcLive)    wcLive.textContent    = words;
+    if (wcDisplay) wcDisplay.textContent = words;
+  }
+
+  /* Run on page load */
+  updatePreview();
+  updateWC();
+</script>
+</body>
+</html>

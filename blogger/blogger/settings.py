@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'accounts',
     'blog',
     'trader',
+    'ai_writer',
     'django_extensions'
 ]
 

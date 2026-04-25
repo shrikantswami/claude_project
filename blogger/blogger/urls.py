@@ -26,6 +26,7 @@ urlpatterns = [
     path("accounts/", include("accounts.urls", namespace="accounts")),
     path('blog/',     include('blog.urls',     namespace='blog')),
     path("", HomeView.as_view(), name="home"),
+    path("ai/", include("ai_writer.urls", namespace="ai_writer")),
     # ── Legal pages ────────────────────────────
     path("terms/", project_views.terms, name="terms"),  # ← add
     path("privacy/", project_views.privacy, name="privacy"),  # ← add
