@@ -418,7 +418,7 @@
 
     <!-- Post body — rendered as HTML (use |safe if content is pre-sanitised) -->
     <div class="article-body" id="article-body">
-      {{ post.content|linebreaks }}
+      {{ post.content|safe }}
     </div>
 
     <!-- Like + share bar -->
