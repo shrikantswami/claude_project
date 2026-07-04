@@ -27,6 +27,8 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 CSRF_TRUSTED_ORIGINS = [
     'https://claudeproject-production-9384.up.railway.app',
+    'https://techblogger.co.in/',
+    'https://www.techblogger.co.in/'
 ]
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
