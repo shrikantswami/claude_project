@@ -134,3 +134,7 @@ LOGOUT_REDIRECT_URL = "accounts:login"
 
 MEDIA_URL  = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Leave empty in dev — no ads locally
+GOOGLE_ADSENSE_CLIENT = ''
+GOOGLE_ANALYTICS_ID   = ''

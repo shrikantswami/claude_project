@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'blogger.context_processors.google_ads',
             ],
         },
     },
@@ -173,3 +174,6 @@ LOGOUT_REDIRECT_URL = "accounts:login"
 MEDIA_URL  = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Google Ads
+GOOGLE_ADSENSE_CLIENT = os.environ.get('GOOGLE_ADSENSE_CLIENT', '')
+GOOGLE_ANALYTICS_ID   = os.environ.get('GOOGLE_ANALYTICS_ID', '')

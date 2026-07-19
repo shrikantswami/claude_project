@@ -7,6 +7,15 @@
   <meta name="description" content="{{ post.excerpt|default:post.content|truncatewords:25 }}" />
   <meta property="og:title"       content="{{ post.title }}" />
   <meta property="og:description" content="{{ post.excerpt|default:post.content|truncatewords:25 }}" />
+
+    <!-- Google AdSense -->
+  {% if GOOGLE_ADSENSE_CLIENT %}
+  <script async
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ GOOGLE_ADSENSE_CLIENT }}"
+    crossorigin="anonymous">
+  </script>
+  {% endif %}
+
   {% if post.thumbnail %}
   <meta property="og:image"       content="{{ request.scheme }}://{{ request.get_host }}{{ post.thumbnail.url }}" />
   {% endif %}
