@@ -78,7 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'blogger.context_processors.google_ads',
+                'blogger.context_processor.google_ads',
             ],
         },
     },
