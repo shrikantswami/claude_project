@@ -21,6 +21,15 @@ from django.conf.urls.static import static
 from blog.views import HomeView
 from . import views as project_views
 
+from django.contrib.sitemaps.views import sitemap
+from blog.sitemap import PostSitemap, StaticViewSitemap
+
+sitemaps = {
+    'posts': PostSitemap,
+    'static': StaticViewSitemap,
+}
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("accounts/", include("accounts.urls", namespace="accounts")),
@@ -30,6 +39,7 @@ urlpatterns = [
     # ── Legal pages ────────────────────────────
     path("terms/", project_views.terms, name="terms"),  # ← add
     path("privacy/", project_views.privacy, name="privacy"),  # ← add
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
 
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
