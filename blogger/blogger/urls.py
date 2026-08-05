@@ -40,6 +40,7 @@ urlpatterns = [
     path("terms/", project_views.terms, name="terms"),  # ← add
     path("privacy/", project_views.privacy, name="privacy"),  # ← add
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='sitemap'),
+    path('smaller-apps/', include('smaller_apps.urls')),
 
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

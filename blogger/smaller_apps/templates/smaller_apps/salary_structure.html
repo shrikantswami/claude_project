@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>In-Hand Salary Ledger — CTC Breakup Calculator</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     ALL rules below are scoped under .slw (Salary Ledger Widget)
+     and, where a property is commonly clobbered by a host app's
+     stylesheet (Bootstrap, Tailwind preflight, Django admin, a
+     CMS theme, etc.), it's marked !important. This lets you drop
+     this markup into an existing page/template and have it render
+     exactly as designed, regardless of what the surrounding page
+     already loads.
+
+     Best isolation is still an <iframe src="this-file.html">
+     (see README) — the scoping below is for cases where you need
+     it inline in a template instead.
+     ============================================================ */
+
+  .slw{
+    --ink:#0F1B2E;
+    --ink-soft:#16243D;
+    --ink-softer:#1D2E4A;
+    --ink-line:#2B3E5C;
+    --paper:#FBF7EE;
+    --paper-dim:#F1EAD8;
+    --paper-line:#DDD3B8;
+    --gold:#D4A017;
+    --gold-soft:#E9C766;
+    --teal:#3D8574;
+    --teal-deep:#2A5F52;
+    --rust:#B5451B;
+    --text-light:#EDEBE3;
+    --text-muted:#96A7C1;
+    --text-ink:#241C0E;
+    --text-ink-muted:#6B5E42;
+    --font-display:'Fraunces', serif;
+    --font-body:'Source Sans 3', sans-serif;
+    --font-mono:'JetBrains Mono', monospace;
+  }
+
+  /* --- Reset: strip inherited host-page styling on every element
+     inside the widget before our own rules apply --- */
+  .slw, .slw *, .slw *::before, .slw *::after{
+    box-sizing:border-box !important;
+  }
+  .slw h1, .slw h2, .slw h3, .slw p, .slw ul, .slw li,
+  .slw button, .slw input, .slw select, .slw label,
+  .slw details, .slw summary{
+    margin:0 !important;
+    padding:0 !important;
+    border:0 !important;
+    background:none !important;
+    font:inherit !important;
+    text-align:left !important;
+    color:inherit !important;
+    line-height:inherit !important;
+    border-radius:0 !important;
+    box-shadow:none !important;
+    -webkit-appearance:none !important;
+    appearance:none !important;
+  }
+  .slw a{ text-decoration:none !important; color:inherit !important; }
+  .slw ul{ list-style:none !important; }
+  .slw table{ border-collapse:collapse !important; }
+
+  .slw{
+    all: unset;
+    display:block !important;
+    background:var(--ink) !important;
+    background-image:
+      radial-gradient(circle at 15% 10%, rgba(212,160,23,0.07), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(61,133,116,0.08), transparent 45%) !important;
+    color:var(--text-light) !important;
+    font-family:var(--font-body) !important;
+    font-size:16px !important;
+    font-weight:400 !important;
+    line-height:1.45 !important;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ============================================================
+     LAYOUT SHELL
+     ============================================================ */
+  .slw .app{
+    display:grid !important;
+    grid-template-columns: 1.15fr 1fr !important;
+    gap:0 !important;
+    min-height:100vh;
+  }
+  @media (max-width: 980px){
+    .slw .app{grid-template-columns:1fr !important;}
+  }
+
+  .slw header.masthead{
+    grid-column:1 / -1;
+    padding:36px 48px 8px !important;
+    border-bottom:1px solid var(--ink-line) !important;
+    display:flex !important;
+    align-items:baseline !important;
+    justify-content:space-between !important;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  .slw header.masthead .eyebrow{
+    font-family:var(--font-mono) !important;
+    font-size:11px !important;
+    letter-spacing:.14em !important;
+    text-transform:uppercase !important;
+    color:var(--gold-soft) !important;
+    margin:0 0 6px !important;
+  }
+  .slw header.masthead h1{
+    font-family:var(--font-display) !important;
+    font-weight:600 !important;
+    font-size:clamp(26px,3.2vw,38px) !important;
+    margin:0 0 14px !important;
+    letter-spacing:-0.01em;
+    color:var(--text-light) !important;
+  }
+  .slw header.masthead .sub{
+    color:var(--text-muted) !important;
+    font-size:14.5px !important;
+    max-width:56ch;
+    line-height:1.5 !important;
+    margin-bottom:16px !important;
+  }
+
+  /* ============================================================
+     LEFT — INPUT LEDGER
+     ============================================================ */
+  .slw .ledger{
+    padding:28px 48px 80px !important;
+  }
+  .slw .field-section{
+    margin-bottom:30px !important;
+  }
+  .slw .field-section .section-title{
+    font-family:var(--font-mono) !important;
+    font-size:11px !important;
+    letter-spacing:.12em !important;
+    text-transform:uppercase !important;
+    color:var(--gold-soft) !important;
+    display:flex !important;
+    align-items:center !important;
+    gap:10px;
+    margin-bottom:16px !important;
+  }
+  .slw .field-section .section-title::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:var(--ink-line);
+  }
+
+  .slw .row{
+    display:grid !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:14px !important;
+    margin-bottom:14px !important;
+  }
+  .slw .row.single{grid-template-columns:1fr !important;}
+
+  .slw label{
+    display:block !important;
+    font-size:12.5px !important;
+    color:var(--text-muted) !important;
+    margin-bottom:6px !important;
+    font-weight:600 !important;
+  }
+  .slw label .hint{
+    font-weight:400 !important;
+    color:#5C7089 !important;
+    font-size:11.5px !important;
+  }
+
+  .slw input[type="number"], .slw input[type="text"], .slw select{
+    width:100% !important;
+    background:var(--ink-soft) !important;
+    border:1px solid var(--ink-line) !important;
+    color:var(--text-light) !important;
+    font-family:var(--font-mono) !important;
+    font-size:14.5px !important;
+    padding:11px 12px !important;
+    border-radius:4px !important;
+    display:block !important;
+    height:auto !important;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .slw select{font-family:var(--font-body) !important; font-size:14px !important;}
+  .slw input:focus, .slw select:focus{
+    outline:none !important;
+    border-color:var(--gold) !important;
+    background:var(--ink-softer) !important;
+    box-shadow:none !important;
+  }
+  .slw input::placeholder{color:#4C5E7B !important;}
+
+  .slw .rupee-wrap{position:relative;}
+  .slw .rupee-wrap::before{
+    content:"₹";
+    position:absolute;
+    left:12px; top:50%; transform:translateY(-50%);
+    color:#5C7089;
+    font-family:var(--font-mono);
+    pointer-events:none;
+  }
+  .slw .rupee-wrap input{padding-left:26px !important;}
+
+  .slw .toggle-group{
+    display:flex !important;
+    border:1px solid var(--ink-line) !important;
+    border-radius:4px !important;
+    overflow:hidden !important;
+  }
+  .slw .toggle-group button{
+    flex:1 !important;
+    padding:10px 8px !important;
+    background:var(--ink-soft) !important;
+    border:none !important;
+    color:var(--text-muted) !important;
+    font-family:var(--font-body) !important;
+    font-size:13px !important;
+    font-weight:600 !important;
+    cursor:pointer !important;
+    border-right:1px solid var(--ink-line) !important;
+    transition:background .15s ease, color .15s ease;
+  }
+  .slw .toggle-group button:last-child{border-right:none !important;}
+  .slw .toggle-group button.active{
+    background:var(--teal-deep) !important;
+    color:#EAF5F1 !important;
+  }
+
+  .slw details.adv{
+    margin-top:8px !important;
+    border:1px solid var(--ink-line) !important;
+    border-radius:6px !important;
+    background:rgba(255,255,255,0.015) !important;
+  }
+  .slw details.adv summary{
+    padding:12px 14px !important;
+    cursor:pointer !important;
+    font-size:13px !important;
+    font-weight:600 !important;
+    color:var(--gold-soft) !important;
+    list-style:none !important;
+    display:flex !important;
+    align-items:center !important;
+    gap:8px;
+  }
+  .slw details.adv summary::-webkit-details-marker{display:none;}
+  .slw details.adv summary::before{
+    content:"▸";
+    transition:transform .15s ease;
+    font-size:11px;
+  }
+  .slw details.adv[open] summary::before{transform:rotate(90deg);}
+  .slw details.adv .adv-body{padding:4px 14px 16px !important;}
+
+  .slw .disclaimer{
+    margin-top:28px !important;
+    font-size:12px !important;
+    color:#5C7089 !important;
+    line-height:1.6 !important;
+    border-left:2px solid var(--ink-line) !important;
+    padding-left:14px !important;
+  }
+
+  /* ============================================================
+     RIGHT — PAYSLIP (signature element)
+     ============================================================ */
+  .slw .payslip-panel{
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.02), transparent 12%),
+      var(--ink-soft) !important;
+    padding:28px 48px 60px !important;
+    position:relative;
+    border-left:1px solid var(--ink-line) !important;
+  }
+  @media (max-width:980px){
+    .slw .payslip-panel{border-left:none !important; border-top:1px solid var(--ink-line) !important;}
+  }
+
+  .slw .payslip-sticky{position:sticky; top:24px;}
+
+  .slw .payslip{
+    background:var(--paper) !important;
+    color:var(--text-ink) !important;
+    border-radius:3px !important;
+    position:relative;
+    box-shadow:0 24px 48px -18px rgba(0,0,0,0.55), 0 2px 0 rgba(0,0,0,0.05) !important;
+    display:grid !important;
+    grid-template-columns:38px 1fr !important;
+    overflow:hidden !important;
+  }
+
+  /* perforated stub strip */
+  .slw .stub{
+    background:var(--paper-dim) !important;
+    border-right:1px dashed var(--paper-line) !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    padding:20px 0 !important;
+    position:relative;
+  }
+  .slw .stub .dots{
+    display:flex !important;
+    flex-direction:column !important;
+    gap:9px;
+  }
+  .slw .stub .dots span{
+    width:5px;height:5px;border-radius:50%;
+    background:var(--ink);
+    opacity:.55;
+    display:block !important;
+  }
+  .slw .stub .vertical-label{
+    writing-mode:vertical-rl;
+    font-family:var(--font-mono) !important;
+    font-size:10px !important;
+    letter-spacing:.18em !important;
+    color:var(--text-ink-muted) !important;
+    text-transform:uppercase !important;
+  }
+
+  .slw .payslip-body{padding:26px 26px 20px !important;}
+
+  .slw .payslip-head{
+    display:flex !important;
+    justify-content:space-between !important;
+    align-items:flex-start !important;
+    border-bottom:2px solid var(--text-ink) !important;
+    padding-bottom:14px !important;
+    margin-bottom:16px !important;
+  }
+  .slw .payslip-head .brand{
+    font-family:var(--font-display) !important;
+    font-size:20px !important;
+    font-weight:600 !important;
+    color:var(--text-ink) !important;
+  }
+  .slw .payslip-head .brand small{
+    display:block !important;
+    font-family:var(--font-mono) !important;
+    font-size:10.5px !important;
+    font-weight:400 !important;
+    color:var(--text-ink-muted) !important;
+    letter-spacing:.08em !important;
+    margin-top:3px !important;
+  }
+  .slw .payslip-head .period{
+    text-align:right !important;
+    font-family:var(--font-mono) !important;
+    font-size:11px !important;
+    color:var(--text-ink-muted) !important;
+  }
+
+  .slw .stamp{
+    position:absolute;
+    top:110px; right:28px;
+    width:118px;height:118px;
+    border:2.5px solid var(--teal-deep) !important;
+    border-radius:50% !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    transform:rotate(-9deg);
+    opacity:.9;
+    pointer-events:none;
+  }
+  .slw .stamp::before{
+    content:"";
+    position:absolute;
+    inset:6px;
+    border:1px solid var(--teal-deep);
+    border-radius:50%;
+  }
+  .slw .stamp .stamp-text{
+    font-family:var(--font-mono) !important;
+    font-size:10px !important;
+    font-weight:700 !important;
+    color:var(--teal-deep) !important;
+    text-align:center !important;
+    letter-spacing:.06em !important;
+    line-height:1.5 !important;
+  }
+
+  .slw .line-block{margin-bottom:18px !important;}
+  .slw .line-block h3{
+    font-family:var(--font-mono) !important;
+    font-size:10.5px !important;
+    letter-spacing:.1em !important;
+    text-transform:uppercase !important;
+    color:var(--text-ink-muted) !important;
+    margin:0 0 8px !important;
+  }
+  .slw .line{
+    display:flex !important;
+    justify-content:space-between !important;
+    align-items:baseline !important;
+    font-size:13.5px !important;
+    padding:5px 0 !important;
+    border-bottom:1px dotted var(--paper-line) !important;
+  }
+  .slw .line .k{color:var(--text-ink) !important;}
+  .slw .line .k small{display:block !important; color:var(--text-ink-muted) !important; font-size:10.5px !important; margin-top:1px !important;}
+  .slw .line .v{font-family:var(--font-mono) !important; font-weight:600 !important; white-space:nowrap;}
+  .slw .line.deduct .v{color:var(--rust) !important;}
+  .slw .line.add .v{color:var(--text-ink) !important;}
+
+  .slw .net-row{
+    margin-top:14px !important;
+    background:var(--teal-deep) !important;
+    color:#F1FBF8 !important;
+    border-radius:4px !important;
+    padding:16px 18px !important;
+    display:flex !important;
+    justify-content:space-between !important;
+    align-items:center !important;
+  }
+  .slw .net-row .label{
+    font-family:var(--font-mono) !important;
+    font-size:11px !important;
+    letter-spacing:.1em !important;
+    text-transform:uppercase !important;
+    opacity:.85;
+    color:inherit !important;
+  }
+  .slw .net-row .amount{
+    font-family:var(--font-mono) !important;
+    font-size:24px !important;
+    font-weight:700 !important;
+    color:inherit !important;
+  }
+  .slw .net-row.annual{
+    background:transparent !important;
+    border:1px solid var(--teal-deep) !important;
+    color:var(--teal-deep) !important;
+    margin-top:8px !important;
+    padding:12px 18px !important;
+  }
+  .slw .net-row.annual .amount{font-size:17px !important;}
+
+  .slw .bar{
+    height:10px !important;
+    border-radius:5px !important;
+    overflow:hidden !important;
+    display:flex !important;
+    margin:14px 0 6px !important;
+    background:var(--paper-dim) !important;
+  }
+  .slw .bar span{height:100% !important; display:block !important;}
+  .slw .bar .seg-net{background:var(--teal-deep) !important;}
+  .slw .bar .seg-tax{background:var(--rust) !important;}
+  .slw .bar .seg-pf{background:var(--gold) !important;}
+  .slw .bar-legend{
+    display:flex !important;
+    gap:14px !important;
+    flex-wrap:wrap;
+    font-size:11px !important;
+    color:var(--text-ink-muted) !important;
+    font-family:var(--font-mono) !important;
+  }
+  .slw .bar-legend span{display:inline-flex !important; align-items:center !important; gap:5px;}
+  .slw .bar-legend i{width:8px;height:8px;border-radius:50%; display:inline-block !important;}
+
+  .slw .barcode{
+    margin-top:18px !important;
+    height:26px !important;
+    background-image:repeating-linear-gradient(90deg, var(--text-ink) 0 2px, transparent 2px 5px, var(--text-ink) 5px 6px, transparent 6px 9px) !important;
+    opacity:.7;
+  }
+
+  .slw .footnote-mini{
+    margin-top:20px !important;
+    font-family:var(--font-mono) !important;
+    font-size:10.5px !important;
+    color:var(--text-ink-muted) !important;
+    line-height:1.6 !important;
+  }
+
+  @media (max-width:640px){
+    .slw header.masthead, .slw .ledger, .slw .payslip-panel{padding-left:20px !important; padding-right:20px !important;}
+    .slw .row{grid-template-columns:1fr !important;}
+  }
+</style>
+
+<div class="slw">
+<div class="app">
+
+  <header class="masthead">
+    <div>
+      <p class="eyebrow">Offer Comparison / Take-Home Estimator</p>
+      <h1>In-Hand Salary Ledger</h1>
+      <p class="sub">Enter the CTC from your new offer on the left. The payslip on the right recalculates the full structure — basic, HRA, PF, gratuity, professional tax and TDS — as you type.</p>
+    </div>
+  </header>
+
+  <!-- ============================================================
+       LEFT PANEL — INPUTS
+       ============================================================ -->
+  <section class="ledger">
+
+    <div class="field-section">
+      <p class="section-title">CTC &amp; structure</p>
+      <div class="row single">
+        <div>
+          <label for="ctc">Annual CTC offered <span class="hint">(₹ per year)</span></label>
+          <div class="rupee-wrap"><input type="number" id="ctc" value="1800000" min="0" step="1000"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="basicPct">Basic salary <span class="hint">(% of fixed CTC)</span></label>
+          <input type="number" id="basicPct" value="40" min="20" max="60" step="1">
+        </div>
+        <div>
+          <label for="variablePct">Variable / bonus <span class="hint">(% of CTC)</span></label>
+          <input type="number" id="variablePct" value="10" min="0" max="40" step="1">
+        </div>
+      </div>
+      <div class="row single">
+        <div>
+          <label>City type <span class="hint">(sets HRA % of basic)</span></label>
+          <div class="toggle-group" id="cityToggle">
+            <button type="button" data-val="metro" class="active">Metro — 50%</button>
+            <button type="button" data-val="nonmetro">Non-metro — 40%</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-section">
+      <p class="section-title">PF, gratuity &amp; state</p>
+      <div class="row">
+        <div>
+          <label for="pfBasis">Employer PF computed on</label>
+          <select id="pfBasis">
+            <option value="capped">Capped basic — ₹15,000/mo (statutory min)</option>
+            <option value="actual">Actual basic (many private employers)</option>
+          </select>
+        </div>
+        <div>
+          <label for="state">State <span class="hint">(professional tax)</span></label>
+          <select id="state">
+            <option>Telangana</option>
+            <option>Andhra Pradesh</option>
+            <option>Karnataka</option>
+            <option>Maharashtra</option>
+            <option>West Bengal</option>
+            <option>Tamil Nadu</option>
+            <option>Gujarat</option>
+            <option>Madhya Pradesh</option>
+            <option>Kerala</option>
+            <option>Odisha</option>
+            <option>Delhi</option>
+            <option>Haryana</option>
+            <option>Uttar Pradesh</option>
+            <option>Rajasthan</option>
+            <option>Other / not applicable</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-section">
+      <p class="section-title">Tax regime</p>
+      <div class="row single">
+        <div class="toggle-group" id="regimeToggle">
+          <button type="button" data-val="new" class="active">New regime (default)</button>
+          <button type="button" data-val="old">Old regime</button>
+        </div>
+      </div>
+
+      <details class="adv" id="oldRegimeBlock" style="display:none;">
+        <summary>Old regime details — rent, 80C, age</summary>
+        <div class="adv-body">
+          <div class="row">
+            <div>
+              <label for="rent">Rent paid <span class="hint">(₹ per year)</span></label>
+              <div class="rupee-wrap"><input type="number" id="rent" value="240000" min="0" step="1000"></div>
+            </div>
+            <div>
+              <label for="sec80c">Section 80C investments <span class="hint">(₹/yr, incl. your PF)</span></label>
+              <div class="rupee-wrap"><input type="number" id="sec80c" value="150000" min="0" max="150000" step="1000"></div>
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label for="sec80d">Health insurance premium — 80D <span class="hint">(₹/yr)</span></label>
+              <div class="rupee-wrap"><input type="number" id="sec80d" value="0" min="0" max="25000" step="500"></div>
+            </div>
+            <div>
+              <label for="age">Age band</label>
+              <select id="age">
+                <option value="below60">Below 60</option>
+                <option value="60to80">60 to 80 (senior citizen)</option>
+                <option value="above80">Above 80 (super senior)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div class="disclaimer">
+      Figures are indicative estimates for FY 2025-26 (AY 2026-27) — basic/HRA split, PF, gratuity and professional tax follow common private-sector conventions, which vary by employer. Income tax ignores marginal relief nuances and TDS timing. Confirm exact numbers against your signed offer letter and Form 16.
+    </div>
+  </section>
+
+  <!-- ============================================================
+       RIGHT PANEL — PAYSLIP OUTPUT (signature element)
+       ============================================================ -->
+  <section class="payslip-panel">
+    <div class="payslip-sticky">
+      <div class="payslip">
+        <div class="stub">
+          <div class="vertical-label">Counterfoil</div>
+          <div class="dots">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div class="vertical-label">Est. slip</div>
+        </div>
+
+        <div class="payslip-body">
+          <div class="payslip-head">
+            <div class="brand">New Offer<small>Projected Salary Structure</small></div>
+            <div class="period" id="periodLabel">FY 2025–26<br>Monthly, avg.</div>
+          </div>
+
+          <div class="stamp"><div class="stamp-text">NET<br>PAY<br>EST.</div></div>
+
+          <div class="line-block">
+            <h3>Earnings (annual)</h3>
+            <div class="line add"><span class="k">Basic salary</span><span class="v" id="out-basic">—</span></div>
+            <div class="line add"><span class="k">House Rent Allowance<small id="hraNote"></small></span><span class="v" id="out-hra">—</span></div>
+            <div class="line add"><span class="k">Special allowance <small>balancing figure</small></span><span class="v" id="out-special">—</span></div>
+            <div class="line add"><span class="k">Variable / bonus <small>performance-linked</small></span><span class="v" id="out-variable">—</span></div>
+            <div class="line add"><span class="k">Employer PF contribution</span><span class="v" id="out-erpf">—</span></div>
+            <div class="line add"><span class="k">Gratuity provision <small>4.81% of basic</small></span><span class="v" id="out-gratuity">—</span></div>
+          </div>
+
+          <div class="line-block">
+            <h3>Deductions (annual)</h3>
+            <div class="line deduct"><span class="k">Employee PF</span><span class="v" id="out-eepf">—</span></div>
+            <div class="line deduct"><span class="k">Professional tax <small id="ptNote"></small></span><span class="v" id="out-pt">—</span></div>
+            <div class="line deduct"><span class="k">Income tax (TDS) <small id="taxRegimeNote"></small></span><span class="v" id="out-tax">—</span></div>
+          </div>
+
+          <div class="bar" id="proportionBar">
+            <span class="seg-net" style="width:70%"></span>
+            <span class="seg-pf" style="width:15%"></span>
+            <span class="seg-tax" style="width:15%"></span>
+          </div>
+          <div class="bar-legend">
+            <span><i style="background:var(--teal-deep)"></i>Net in-hand</span>
+            <span><i style="background:var(--gold)"></i>PF + PT</span>
+            <span><i style="background:var(--rust)"></i>Income tax</span>
+          </div>
+
+          <div class="net-row">
+            <span class="label">Est. monthly in-hand</span>
+            <span class="amount" id="out-netmonthly">—</span>
+          </div>
+          <div class="net-row annual">
+            <span class="label">Est. annual in-hand</span>
+            <span class="amount" id="out-netannual">—</span>
+          </div>
+
+          <p class="footnote-mini" id="checksumNote">CTC reconciles: Basic + HRA + Special + Variable + Employer PF + Gratuity = Annual CTC entered.</p>
+          <div class="barcode"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<script>
+/* ================================================================
+   SALARY STRUCTURE ENGINE
+   Pure functions — no external dependencies. Mirrors the logic in
+   salary_calculator.py so the same numbers can be reproduced
+   server-side (see README-django-integration.md).
+   ================================================================ */
+
+const PROFESSIONAL_TAX_ANNUAL = {
+  'Telangana':2400, 'Andhra Pradesh':2400, 'Karnataka':2400,
+  'Maharashtra':2500, 'West Bengal':2500, 'Tamil Nadu':2500,
+  'Gujarat':2400, 'Madhya Pradesh':2500, 'Kerala':2500, 'Odisha':1500,
+  'Delhi':0, 'Haryana':0, 'Uttar Pradesh':0, 'Rajasthan':0,
+  'Other / not applicable':0
+};
+
+const PF_WAGE_CAP_ANNUAL = 15000 * 12; // statutory PF wage ceiling
+
+function slabTax(income, brackets){
+  let tax = 0, prev = 0;
+  for(const b of brackets){
+    if(income > prev){
+      const taxableInBand = Math.min(income, b.limit) - prev;
+      tax += taxableInBand * b.rate;
+      prev = b.limit;
+    } else break;
+  }
+  return tax;
+}
+
+const NEW_REGIME_BRACKETS = [
+  {limit:400000,  rate:0.00},
+  {limit:800000,  rate:0.05},
+  {limit:1200000, rate:0.10},
+  {limit:1600000, rate:0.15},
+  {limit:2000000, rate:0.20},
+  {limit:2400000, rate:0.25},
+  {limit:Infinity,rate:0.30},
+];
+
+function oldRegimeBrackets(ageBand){
+  if(ageBand === '60to80'){
+    return [{limit:300000,rate:0},{limit:500000,rate:.05},{limit:1000000,rate:.20},{limit:Infinity,rate:.30}];
+  }
+  if(ageBand === 'above80'){
+    return [{limit:500000,rate:0},{limit:1000000,rate:.20},{limit:Infinity,rate:.30}];
+  }
+  return [{limit:250000,rate:0},{limit:500000,rate:.05},{limit:1000000,rate:.20},{limit:Infinity,rate:.30}];
+}
+
+function computeNewRegimeTax(grossAnnual){
+  const standardDeduction = 75000;
+  const taxable = Math.max(0, grossAnnual - standardDeduction);
+  let tax = slabTax(taxable, NEW_REGIME_BRACKETS);
+  if(taxable <= 1200000) tax = 0; // Sec 87A rebate (marginal relief beyond this ignored)
+  return {taxable, tax: tax * 1.04}; // + 4% health & education cess
+}
+
+function computeOldRegimeTax(grossAnnual, {rent, sec80c, sec80d, ageBand, basic, hraReceived, isMetro}){
+  const standardDeduction = 50000;
+  const hraExemption = Math.max(0, Math.min(
+    hraReceived,
+    Math.max(0, rent - 0.10 * basic),
+    (isMetro ? 0.50 : 0.40) * basic
+  ));
+  const cappedSec80c = Math.min(sec80c, 150000);
+  const cappedSec80d = Math.min(sec80d, 25000);
+  const taxable = Math.max(0, grossAnnual - standardDeduction - hraExemption - cappedSec80c - cappedSec80d);
+  let tax = slabTax(taxable, oldRegimeBrackets(ageBand));
+  if(taxable <= 500000) tax = 0; // Sec 87A rebate
+  return {taxable, tax: tax * 1.04, hraExemption};
+}
+
+function computeStructure(inputs){
+  const {
+    ctc, basicPct, variablePct, isMetro, pfBasis,
+    state, regime, rent, sec80c, sec80d, ageBand
+  } = inputs;
+
+  const variableAnnual = ctc * (variablePct/100);
+  const fixedCTC = Math.max(0, ctc - variableAnnual);
+
+  const basic = fixedCTC * (basicPct/100);
+  const hraPct = isMetro ? 0.50 : 0.40;
+  const hra = basic * hraPct;
+
+  const pfWageBasic = pfBasis === 'capped' ? Math.min(basic, PF_WAGE_CAP_ANNUAL) : basic;
+  const employerPF = pfWageBasic * 0.12;
+  const employeePF = pfWageBasic * 0.12;
+  const gratuity = basic * 0.0481;
+
+  let special = fixedCTC - basic - hra - employerPF - gratuity;
+  if(special < 0) special = 0;
+
+  const grossAnnual = basic + hra + special + variableAnnual;
+  const professionalTax = PROFESSIONAL_TAX_ANNUAL[state] ?? 0;
+
+  let taxResult;
+  if(regime === 'new'){
+    taxResult = computeNewRegimeTax(grossAnnual);
+  } else {
+    taxResult = computeOldRegimeTax(grossAnnual, {
+      rent, sec80c, sec80d, ageBand, basic, hraReceived: hra, isMetro
+    });
+  }
+
+  const incomeTax = taxResult.tax;
+  const netAnnual = grossAnnual - employeePF - professionalTax - incomeTax;
+  const netMonthly = netAnnual / 12;
+
+  return {
+    basic, hra, special, variableAnnual, employerPF, gratuity,
+    employeePF, professionalTax, incomeTax, grossAnnual,
+    netAnnual, netMonthly, hraPct,
+    hraExemption: taxResult.hraExemption ?? 0,
+    reconciledCTC: basic + hra + special + variableAnnual + employerPF + gratuity
+  };
+}
+
+/* ================================================================
+   UI WIRING — all lookups scoped to the .slw root so this survives
+   being embedded alongside other JS/CSS on a host page.
+   ================================================================ */
+const fmt = n => '₹' + Math.round(n).toLocaleString('en-IN');
+const root = document.querySelector('.slw');
+const $ = id => root.querySelector('#' + id);
+
+const state = {
+  isMetro: true,
+  pfBasis: 'capped',
+  regime: 'new',
+  ageBand: 'below60'
+};
+
+function readInputs(){
+  return {
+    ctc: parseFloat($('ctc').value) || 0,
+    basicPct: parseFloat($('basicPct').value) || 40,
+    variablePct: parseFloat($('variablePct').value) || 0,
+    isMetro: state.isMetro,
+    pfBasis: $('pfBasis').value,
+    state: $('state').value,
+    regime: state.regime,
+    rent: parseFloat($('rent').value) || 0,
+    sec80c: parseFloat($('sec80c').value) || 0,
+    sec80d: parseFloat($('sec80d').value) || 0,
+    ageBand: $('age').value,
+  };
+}
+
+function render(){
+  const inputs = readInputs();
+  const r = computeStructure(inputs);
+
+  $('out-basic').textContent = fmt(r.basic);
+  $('out-hra').textContent = fmt(r.hra);
+  $('out-special').textContent = fmt(r.special);
+  $('out-variable').textContent = fmt(r.variableAnnual);
+  $('out-erpf').textContent = fmt(r.employerPF);
+  $('out-gratuity').textContent = fmt(r.gratuity);
+
+  $('out-eepf').textContent = '– ' + fmt(r.employeePF);
+  $('out-pt').textContent = '– ' + fmt(r.professionalTax);
+  $('out-tax').textContent = '– ' + fmt(r.incomeTax);
+
+  $('out-netmonthly').textContent = fmt(r.netMonthly);
+  $('out-netannual').textContent = fmt(r.netAnnual);
+
+  $('hraNote').textContent = `${Math.round(r.hraPct*100)}% of basic`;
+  $('ptNote').textContent = `— ${inputs.state}`;
+  $('taxRegimeNote').textContent = inputs.regime === 'new' ? '— new regime' : `— old regime${r.hraExemption ? ', HRA exempt ' + fmt(r.hraExemption) : ''}`;
+
+  $('checksumNote').textContent =
+    `Reconciled: ${fmt(r.reconciledCTC)} vs CTC entered ${fmt(inputs.ctc)}.`;
+
+  // proportion bar
+  const gross = r.grossAnnual || 1;
+  const netPct = Math.max(0, Math.min(100, (r.netAnnual/gross)*100));
+  const pfPct = Math.max(0, Math.min(100, ((r.employeePF+r.professionalTax)/gross)*100));
+  const taxPct = Math.max(0, 100 - netPct - pfPct);
+  const bar = $('proportionBar');
+  bar.children[0].style.width = netPct + '%';
+  bar.children[1].style.width = pfPct + '%';
+  bar.children[2].style.width = taxPct + '%';
+}
+
+// City toggle
+$('cityToggle').addEventListener('click', e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  [...btn.parentElement.children].forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  state.isMetro = btn.dataset.val === 'metro';
+  render();
+});
+
+// Regime toggle
+$('regimeToggle').addEventListener('click', e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  [...btn.parentElement.children].forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  state.regime = btn.dataset.val;
+  const oldBlock = $('oldRegimeBlock');
+  oldBlock.style.display = state.regime === 'old' ? 'block' : 'none';
+  if(state.regime === 'old') oldBlock.open = true;
+  render();
+});
+
+// Any input change
+root.querySelectorAll('input, select').forEach(el=>{
+  el.addEventListener('input', render);
+  el.addEventListener('change', render);
+});
+
+render();
+</script>
+</body>
+</html>
